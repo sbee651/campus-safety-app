@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guardian — NMU Campus Safety Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#101a4d;
+    --navy-deep:#0b1338;
+    --yellow:#f4de4e;
+    --yellow-ink:#1a1a1a;
+    --coral:#ef5f75;
+    --coral-soft:#f9d8de;
+    --mint:#7bd88f;
+    --mint-soft:#d8f3de;
+    --ink:#101a4d;
+    --paper:#f6f5f1;
+    --muted:#8b93c9;
+    --white:#ffffff;
+    --radius-lg:26px;
+    --radius-md:16px;
+    --radius-sm:10px;
+    --font-display:'Sora', system-ui, sans-serif;
+    --font-body:'Manrope', system-ui, sans-serif;
+  }
+
+  :root:not([data-theme="light"]){
+    --scrim: rgba(0,0,0,.35);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0e1330;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0e1330;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(1100px 700px at 14% 8%, #2a3690 0%, transparent 60%),
+      radial-gradient(900px 700px at 86% 92%, #0a1442 0%, transparent 55%),
+      var(--navy-deep);
+    font-family:var(--font-body);
+    color:var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px 16px;
+    overflow-x:hidden;
+  }
+
+  .stage{
+    width:100%;
+    max-width:1060px;
+    display:flex;
+    gap:48px;
+    align-items:center;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+
+  .intro{
+    flex:1 1 300px;
+    max-width:380px;
+    color:var(--white);
+  }
+  .intro .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:var(--font-body);
+    font-weight:700;
+    font-size:12.5px;
+    letter-spacing:.02em;
+    background:rgba(244,222,78,.14);
+    color:var(--yellow);
+    padding:6px 12px;
+    border-radius:999px;
+    margin-bottom:18px;
+  }
+  .intro h1{
+    font-family:var(--font-display);
+    font-weight:800;
+    font-size:clamp(30px,4vw,40px);
+    line-height:1.08;
+    margin:0 0 14px;
+    letter-spacing:-0.01em;
+  }
+  .intro p{
+    font-size:15.5px;
+    line-height:1.6;
+    color:#c4cae8;
+    margin:0 0 26px;
+    max-width:34ch;
+  }
+  .intro .taplist{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .intro .taplist li{
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+    font-size:13.5px;
+    color:#aab1de;
+    line-height:1.5;
+  }
+  .intro .taplist b{
+    color:var(--white);
+    font-weight:600;
+  }
+  .dot{
+    flex:none;
+    width:6px;height:6px;border-radius:50%;
+    background:var(--yellow);
+    margin-top:7px;
+  }
+
+  /* PHONE FRAME */
+  .phone-wrap{
+    position:relative;
+    flex:none;
+  }
+  .phone{
+    width:340px;
+    height:700px;
+    background:#050814;
+    border-radius:48px;
+    padding:14px;
+    box-shadow:
+      0 40px 80px -20px rgba(0,0,0,.65),
+      0 0 0 2px rgba(255,255,255,.05) inset;
+    position:relative;
+  }
+  .notch{
+    position:absolute;
+    top:14px; left:50%;
+    transform:translateX(-50%);
+    width:120px; height:26px;
+    background:#050814;
+    border-radius:0 0 18px 18px;
+    z-index:30;
+  }
+  .notch::after{
+    content:'';
+    position:absolute; top:9px; left:50%;
+    transform:translateX(-50%);
+    width:8px; height:8px; border-radius:50%;
+    background:#1c2140;
+  }
+  .screen-viewport{
+    position:relative;
+    width:100%; height:100%;
+    background:var(--navy);
+    border-radius:36px;
+    overflow:hidden;
+  }
+
+  .screen{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    opacity:0; pointer-events:none;
+    transform:translateY(14px);
+    transition:opacity .28s ease, transform .28s ease;
+  }
+  .screen.active{
+    opacity:1; pointer-events:auto; transform:translateY(0);
+    z-index:5;
+  }
+  .screen.overlay{ z-index:20; }
+
+  .screen-body{
+    flex:1;
+    overflow-y:auto;
+    padding:52px 20px 18px;
+    -ms-overflow-style:none;
+    scrollbar-width:none;
+  }
+  .screen-body::-webkit-scrollbar{ display:none; }
+
+  .on-paper .screen-body{ background:var(--paper); color:var(--ink); }
+  .on-navy .screen-body{ background:var(--navy); color:var(--white); }
+  .on-white .screen-body{ background:var(--white); color:var(--ink); }
+
+  /* TOPBAR */
+  .topbar{
+    display:flex; align-items:center; gap:12px;
+    padding:2px 2px 16px;
+  }
+  .topbar h2{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:21px;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .back-btn{
+    width:38px;height:38px;border-radius:12px;
+    background:rgba(255,255,255,.12);
+    border:none;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--white);
+    cursor:pointer;
+    flex:none;
+  }
+  .on-paper .back-btn, .on-white .back-btn{
+    background:rgba(16,26,77,.06);
+    color:var(--ink);
+  }
+  .back-btn:hover{ filter:brightness(1.1); }
+  .subtitle{
+    font-size:12.5px;
+    color:var(--muted);
+    margin:-10px 0 18px;
+  }
+  .on-paper .subtitle, .on-white .subtitle{ color:#6b7094; }
+
+  /* HOME */
+  .status-pill{
+    display:flex; align-items:center; gap:12px;
+    background:rgba(255,255,255,.08);
+    border-radius:16px;
+    padding:12px 14px;
+    margin-bottom:22px;
+  }
+  .status-dot{
+    width:10px;height:10px;border-radius:50%;
+    background:var(--mint);
+    box-shadow:0 0 0 4px rgba(123,216,143,.18);
+    flex:none;
+  }
+  .status-pill strong{ display:block; font-size:13.5px; }
+  .status-pill span{ display:block; font-size:11.5px; color:var(--muted); margin-top:1px; }
+
+  .sos-zone{
+    text-align:center;
+    margin:6px 0 22px;
+  }
+  .sos-caption{
+    font-size:11.5px;
+    font-weight:700;
+    letter-spacing:.06em;
+    color:var(--muted);
+    margin-bottom:16px;
+  }
+  .sos-btn{
+    width:172px;height:172px;
+    border-radius:50%;
+    border:none;
+    background:radial-gradient(circle at 32% 28%, #ff8095, var(--coral) 62%);
+    color:var(--white);
+    font-family:var(--font-display);
+    font-weight:800;
+    font-size:26px;
+    letter-spacing:.02em;
+    cursor:pointer;
+    box-shadow:0 0 0 10px rgba(239,95,117,.16), 0 18px 40px -14px rgba(239,95,117,.75);
+    position:relative;
+    transition:transform .12s ease;
+  }
+  .sos-btn:active{ transform:scale(.96); }
+  .sos-hint{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:16px;
+    line-height:1.5;
+    max-width:220px;
+    margin-inline:auto;
+  }
+
+  .action-list{
+    display:flex; flex-direction:column; gap:10px;
+    margin-top:4px;
+  }
+  .action-btn{
+    display:flex; align-items:center; gap:13px;
+    background:var(--yellow);
+    color:var(--yellow-ink);
+    border:none;
+    border-radius:var(--radius-md);
+    padding:15px 16px;
+    font-family:var(--font-body);
+    font-weight:700;
+    font-size:14.5px;
+    text-align:left;
+    cursor:pointer;
+    width:100%;
+  }
+  .action-btn small{
+    display:block;
+    font-weight:500;
+    font-size:11.5px;
+    color:#5c5730;
+    margin-top:2px;
+  }
+  .action-icon{
+    flex:none;
+    width:36px;height:36px;
+    border-radius:10px;
+    background:rgba(16,26,77,.08);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .action-btn:hover{ filter:brightness(1.03); }
+
+  /* BOTTOM NAV */
+  .bottom-nav{
+    flex:none;
+    display:flex;
+    background:var(--paper);
+    border-top:1px solid rgba(16,26,77,.08);
+    padding:10px 6px 14px;
+  }
+  .on-navy + .bottom-nav, .navshell .on-navy ~ .bottom-nav{}
+  .nav-item{
+    flex:1;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    background:none; border:none;
+    color:#9aa0c4;
+    font-family:var(--font-body);
+    font-size:10.5px;
+    font-weight:600;
+    cursor:pointer;
+    padding:4px 0;
+  }
+  .nav-item svg{ width:20px; height:20px; }
+  .nav-item.active{ color:var(--navy); }
+  .nav-item.active svg{ stroke:var(--coral); }
+  .nav-item.more.active{ color:var(--coral); }
+
+  /* COUNTDOWN / SOS ACTIVE */
+  .center-col{
+    flex:1;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+    padding:40px 26px;
+  }
+  .badge-emergency{
+    background:var(--coral-soft);
+    color:#a11d34;
+    font-weight:800;
+    font-size:12px;
+    letter-spacing:.03em;
+    padding:9px 20px;
+    border-radius:999px;
+    margin-bottom:16px;
+  }
+  .status-line{
+    font-weight:700;
+    font-size:13px;
+    letter-spacing:.02em;
+    color:#c7cbee;
+    margin-bottom:26px;
+  }
+  .count-ring{
+    width:176px;height:176px;
+    border-radius:50%;
+    background:var(--yellow);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display);
+    font-weight:800;
+    font-size:76px;
+    color:var(--navy);
+    margin-bottom:26px;
+    position:relative;
+  }
+  .count-ring::after{
+    content:'';
+    position:absolute; bottom:44px; left:50%; transform:translateX(-50%);
+    width:56px; height:6px; border-radius:4px; background:var(--navy);
+  }
+  .live-line{
+    font-size:12.5px;
+    color:#c7cbee;
+    margin-bottom:20px;
+  }
+  .info-card{
+    display:flex; align-items:center; gap:12px;
+    background:var(--yellow);
+    color:var(--yellow-ink);
+    border-radius:var(--radius-md);
+    padding:14px 16px;
+    font-size:12.5px;
+    font-weight:700;
+    text-align:left;
+    line-height:1.4;
+    width:100%;
+    margin-bottom:10px;
+  }
+  .full-actions{ width:100%; display:flex; flex-direction:column; gap:10px; margin-top:2px; }
+  .btn-solid{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    background:var(--yellow); color:var(--yellow-ink);
+    border:none; border-radius:var(--radius-md);
+    padding:14px; font-weight:700; font-size:14px;
+    cursor:pointer; width:100%;
+  }
+  .btn-link{
+    background:none; border:none;
+    color:var(--white); text-decoration:underline;
+    font-weight:700; font-size:13.5px; cursor:pointer;
+    margin-top:18px;
+  }
+
+  /* SAFE WALK */
+  .map-card{
+    border-radius:var(--radius-md);
+    overflow:hidden;
+    height:170px;
+    margin-bottom:18px;
+    position:relative;
+    background:
+      linear-gradient(135deg, #e7ebf5 0%, #d9e0f2 100%);
+  }
+  .map-grid{
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(16,26,77,.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(16,26,77,.08) 1px, transparent 1px);
+    background-size:26px 26px;
+  }
+  .map-route{
+    position:absolute; inset:0;
+  }
+  .map-pin{
+    position:absolute; top:38%; left:52%;
+    width:26px;height:26px;
+    background:var(--coral);
+    border-radius:50% 50% 50% 0;
+    transform:rotate(-45deg) translate(-50%,-50%);
+    box-shadow:0 6px 14px -4px rgba(0,0,0,.35);
+  }
+  .map-pin::after{
+    content:''; position:absolute; top:5px;left:5px;
+    width:10px;height:10px;border-radius:50%;background:#fff;
+  }
+  .map-walker{
+    position:absolute; bottom:22%; left:22%;
+    width:14px;height:14px;border-radius:50%;
+    background:var(--navy);
+    box-shadow:0 0 0 5px rgba(16,26,77,.18);
+    animation:pulse 1.8s infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ box-shadow:0 0 0 5px rgba(16,26,77,.18); }
+    50%{ box-shadow:0 0 0 9px rgba(16,26,77,.08); }
+  }
+  .stat-row{
+    display:flex; gap:12px; margin-bottom:18px;
+  }
+  .stat-box{
+    flex:1;
+    background:rgba(255,255,255,.06);
+    border-radius:var(--radius-md);
+    padding:14px;
+  }
+  .stat-box span{
+    display:block; font-size:11px; font-weight:700; letter-spacing:.03em;
+    color:var(--muted); margin-bottom:6px;
+  }
+  .stat-box strong{
+    font-family:var(--font-display);
+    font-size:24px;
+  }
+  .stream-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--mint-soft);
+    color:#1c6b34;
+    border-radius:var(--radius-md);
+    padding:13px 15px;
+    font-weight:700;
+    font-size:13px;
+    margin-bottom:16px;
+  }
+  .live-tag{
+    background:var(--mint);
+    color:#0d3c1c;
+    font-size:10.5px;
+    font-weight:800;
+    padding:4px 10px;
+    border-radius:999px;
+    letter-spacing:.04em;
+  }
+  .btn-mint{
+    background:var(--mint-soft); color:#1c6b34;
+    border:none; border-radius:var(--radius-md);
+    padding:14px; font-weight:700; font-size:14px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    cursor:pointer; width:100%; margin-bottom:10px;
+  }
+  .btn-coral-outline{
+    background:var(--coral-soft); color:#a11d34;
+    border:none; border-radius:var(--radius-md);
+    padding:14px; font-weight:700; font-size:14px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    cursor:pointer; width:100%;
+  }
+
+  /* GUARDIANS */
+  .guardian-row{
+    display:flex; align-items:center; gap:14px;
+    background:var(--yellow);
+    border-radius:var(--radius-md);
+    padding:14px 16px;
+    margin-bottom:10px;
+  }
+  .avatar-circ{
+    width:42px;height:42px;border-radius:50%;
+    background:#ffcf7a;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800; font-family:var(--font-display);
+    color:#7a4a0f;
+    flex:none;
+  }
+  .guardian-row strong{ font-size:14.5px; color:var(--yellow-ink); }
+  .guardian-row .tag{
+    display:block; font-size:11px; color:#5c5730; margin-top:1px; font-weight:600;
+  }
+  .add-row{
+    display:flex; align-items:center; gap:14px;
+    border:2px dashed rgba(255,255,255,.18);
+    border-radius:var(--radius-md);
+    padding:14px 16px;
+    color:var(--yellow);
+    font-weight:700; font-size:14px;
+    background:none; width:100%; cursor:pointer;
+    margin-bottom:18px;
+  }
+  .plus-circ{
+    width:36px;height:36px;border-radius:50%;
+    background:rgba(244,222,78,.14);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--yellow); font-size:18px; font-weight:800;
+    flex:none;
+  }
+  .note-card{
+    display:flex; gap:12px;
+    background:rgba(255,255,255,.06);
+    border-radius:var(--radius-md);
+    padding:14px;
+    font-size:12px;
+    line-height:1.55;
+    color:#c7cbee;
+  }
+
+  /* FORM (REPORT) */
+  .field{ margin-bottom:16px; }
+  .field label{
+    display:block; font-weight:700; font-size:13px; margin-bottom:8px;
+  }
+  .field input, .field textarea{
+    width:100%;
+    background:var(--yellow);
+    border:none; border-radius:var(--radius-sm);
+    padding:13px 14px;
+    font-family:var(--font-body);
+    font-size:12.5px; font-weight:600;
+    color:#5c5730;
+    resize:none;
+  }
+  .field textarea{ min-height:76px; }
+  .field input::placeholder, .field textarea::placeholder{ color:#8a8450; }
+  .field input:focus, .field textarea:focus{ outline:2px solid var(--coral); outline-offset:2px; }
+  .submit-btn{
+    display:flex; align-items:center; justify-content:center; gap:9px;
+    width:100%;
+    background:var(--yellow); color:#1c6b34;
+    border:none; border-radius:var(--radius-md);
+    padding:15px; font-weight:800; font-size:14.5px;
+    cursor:pointer;
+    margin-top:10px;
+  }
+
+  /* SUBMITTED */
+  .toast-pill{
+    display:flex; align-items:center; gap:12px;
+    background:var(--navy);
+    color:var(--white);
+    border-radius:999px;
+    padding:16px 24px;
+    font-weight:800;
+    font-size:16px;
+    margin-bottom:22px;
+  }
+  .check-badge{
+    width:24px;height:24px;border-radius:50%;
+    background:var(--mint);
+    display:flex; align-items:center; justify-content:center;
+    flex:none;
+  }
+  .ok-btn{
+    background:none; border:none;
+    font-family:var(--font-display);
+    font-weight:800; font-size:20px;
+    text-decoration:underline;
+    color:var(--ink); cursor:pointer;
+  }
+
+  /* RESOURCES */
+  .search-box{
+    display:flex; align-items:center; gap:10px;
+    background:rgba(255,255,255,.08);
+    border-radius:999px;
+    padding:11px 16px;
+    margin-bottom:16px;
+    color:var(--muted);
+    font-size:12.5px;
+  }
+  .res-row{
+    display:flex; align-items:center; gap:13px;
+    background:var(--white);
+    border-radius:var(--radius-md);
+    padding:13px 15px;
+    margin-bottom:10px;
+    cursor:pointer;
+  }
+  .res-icon{
+    width:38px;height:38px;border-radius:10px;
+    background:var(--paper);
+    display:flex;align-items:center;justify-content:center;
+    flex:none;
+  }
+  .res-row strong{ display:block; font-size:13.5px; }
+  .res-row span{ display:block; font-size:11px; color:#6b7094; margin-top:2px; }
+
+  /* PROFILE */
+  .profile-card{
+    display:flex; align-items:center; gap:14px;
+    background:rgba(255,255,255,.06);
+    border-radius:var(--radius-md);
+    padding:15px 16px;
+    margin-bottom:22px;
+  }
+  .profile-card strong{ display:block; font-size:14.5px; }
+  .profile-card span{ display:block; font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .section-label{
+    font-size:11.5px; font-weight:800; letter-spacing:.05em;
+    color:var(--muted); margin-bottom:12px;
+  }
+  .setting-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:rgba(255,255,255,.06);
+    border-radius:var(--radius-md);
+    padding:14px 15px;
+    margin-bottom:10px;
+    cursor:pointer;
+  }
+  .setting-row strong{ display:block; font-size:13.5px; }
+  .setting-row span{ display:block; font-size:11px; color:var(--muted); margin-top:2px; }
+
+  /* MORE SHEET */
+  .sheet-backdrop{
+    position:absolute; inset:0;
+    background:rgba(5,8,20,.5);
+    opacity:0; pointer-events:none;
+    transition:opacity .22s ease;
+    z-index:15;
+  }
+  .sheet-backdrop.active{ opacity:1; pointer-events:auto; }
+  .sheet{
+    position:absolute; left:0; right:0; bottom:0;
+    background:var(--navy);
+    border-radius:24px 24px 0 0;
+    padding:10px 18px 22px;
+    transform:translateY(100%);
+    transition:transform .28s ease;
+    z-index:16;
+  }
+  .sheet.active{ transform:translateY(0); }
+  .sheet-handle{
+    width:36px;height:4px;border-radius:3px;
+    background:rgba(255,255,255,.2);
+    margin:8px auto 16px;
+  }
+  .sheet h3{
+    color:var(--white); font-family:var(--font-display);
+    font-size:17px; margin:0 0 14px;
+  }
+  .sheet-item{
+    display:flex; align-items:center; gap:13px;
+    background:rgba(255,255,255,.06);
+    border-radius:var(--radius-md);
+    padding:14px 15px;
+    margin-bottom:9px;
+    color:var(--white);
+    font-weight:700; font-size:13.5px;
+    border:none; width:100%; text-align:left;
+    cursor:pointer;
+  }
+  .sheet-icon{
+    width:36px;height:36px;border-radius:10px;
+    background:rgba(244,222,78,.14);
+    display:flex;align-items:center;justify-content:center;
+    flex:none;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .screen, .sheet, .sheet-backdrop, .map-walker{ transition:none; animation:none; }
+  }
+
+  @media (max-width:760px){
+    .stage{ flex-direction:column-reverse; gap:30px; }
+    .intro{ text-align:center; max-width:400px; }
+    .intro .taplist{ align-items:flex-start; text-align:left; }
+    .phone{ width:min(340px, 92vw); }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <div class="intro">
+    <span class="eyebrow">● Interactive prototype</span>
+    <h1>Guardian, your campus safety companion</h1>
+    <p>A working click-through of the NMU safety app — SOS alerts, live Safe Walk escorting, guardian contacts, and campus reporting, all in one place.</p>
+    <ul class="taplist">
+      <li><span class="dot"></span><span><b>Tap the SOS circle</b> to trigger the emergency countdown and alert flow.</span></li>
+      <li><span class="dot"></span><span><b>Start Safe Walk</b> to preview live route tracking with guardians watching.</span></li>
+      <li><span class="dot"></span><span><b>Use the bottom tabs</b> to move between Home, Walk, Contacts and More.</span></li>
+    </ul>
+  </div>
+
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen-viewport" id="viewport">
+
+        <!-- HOME -->
+        <section class="screen active on-navy" data-screen="home">
+          <div class="screen-body">
+            <div class="status-pill">
+              <span class="status-dot"></span>
+              <div>
+                <strong>You're on campus</strong>
+                <span>NMU Main Campus · Safe &amp; connected</span>
+              </div>
+            </div>
+
+            <div class="sos-zone">
+              <div class="sos-caption">DOUBLE-TAP WHEN IN DANGER</div>
+              <button class="sos-btn" id="sosBtn">SOS</button>
+              <div class="sos-hint">Notifies campus dispatch and your trusted guardians instantly</div>
+            </div>
+
+            <div class="action-list">
+              <button class="action-btn" data-goto="safewalk">
+                <span class="action-icon">🚶</span>
+                <span>Start Safe Walk<small>Share your route live</small></span>
+              </button>
+              <button class="action-btn" data-goto="report">
+                <span class="action-icon">⚠️</span>
+                <span>Report a concern<small>Submit anonymously</small></span>
+              </button>
+              <button class="action-btn" data-goto="resources">
+                <span class="action-icon">📞</span>
+                <span>Directory<small>Key emergency lines</small></span>
+              </button>
+              <button class="action-btn" data-goto="guardians">
+                <span class="action-icon">🛡️</span>
+                <span>My Guardians<small>3 trusted contacts</small></span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- SOS COUNTDOWN -->
+        <section class="screen on-navy overlay" data-screen="countdown">
+          <div class="center-col">
+            <div class="badge-emergency">EMERGENCY SOS ACTIVATED</div>
+            <div class="status-line">ALERTING RESPONDERS SHORTLY</div>
+            <div class="count-ring" id="countRing">3</div>
+            <div class="live-line">Sharing live location coordinates…</div>
+            <button class="btn-link" id="cancelCountdown">Cancel — I'm OK</button>
+          </div>
+        </section>
+
+        <!-- SOS ACTIVE -->
+        <section class="screen on-navy overlay" data-screen="sosactive">
+          <div class="center-col" style="justify-content:flex-start; padding-top:56px;">
+            <div class="badge-emergency">EMERGENCY SOS ACTIVATED</div>
+            <div class="info-card">📍 Your live location is being broadcast to NMU security and your 3 guardians.</div>
+            <div class="full-actions">
+              <button class="btn-solid">📞 Call campus security now</button>
+              <button class="btn-solid">🛡️ Alert guardians instantly</button>
+            </div>
+            <button class="btn-link" id="cancelActive">Cancel — I'm OK</button>
+          </div>
+        </section>
+
+        <!-- SAFE WALK -->
+        <section class="screen on-navy" data-screen="safewalk">
+          <div class="screen-body">
+            <div class="topbar">
+              <button class="back-btn" data-goto="home">←</button>
+              <div>
+                <h2>Safe Walk Live</h2>
+              </div>
+            </div>
+            <div class="subtitle">Virtually escorted by the NMU community</div>
+
+            <div class="map-card">
+              <div class="map-grid"></div>
+              <div class="map-walker"></div>
+              <div class="map-pin"></div>
+            </div>
+
+            <div class="stat-row">
+              <div class="stat-box">
+                <span>ESTIMATED ARRIVAL</span>
+                <strong>10 min</strong>
+              </div>
+              <div class="stat-box">
+                <span>REMAINING DISTANCE</span>
+                <strong>0.6 km</strong>
+              </div>
+            </div>
+
+            <div class="stream-row">
+              <span>Guardian stream active</span>
+              <span class="live-tag">LIVE</span>
+            </div>
+
+            <button class="btn-mint" data-goto="home">✓ I've arrived safely</button>
+            <button class="btn-coral-outline" data-goto="countdown">⚠ I need help ASAP!</button>
+          </div>
+        </section>
+
+        <!-- GUARDIANS -->
+        <section class="screen on-navy" data-screen="guardians">
+          <div class="screen-body">
+            <div class="topbar">
+              <button class="back-btn" data-goto="home">←</button>
+              <h2>My Guardians</h2>
+            </div>
+            <div class="subtitle">Virtually escorted by the NMU community</div>
+
+            <div class="guardian-row">
+              <span class="avatar-circ">SK</span>
+              <div><strong>Sipho Khumalo</strong><span class="tag">Primary guardian</span></div>
+            </div>
+            <div class="guardian-row">
+              <span class="avatar-circ">SC</span>
+              <div><strong>Sarah Connor</strong><span class="tag">Roommate</span></div>
+            </div>
+            <div class="guardian-row">
+              <span class="avatar-circ">JM</span>
+              <div><strong>Jessica Miller</strong><span class="tag">Family</span></div>
+            </div>
+
+            <button class="add-row"><span class="plus-circ">+</span> Add safety contact</button>
+
+            <div class="note-card">These people are automatically notified by SMS if you trigger SOS, or if you miss a check-in during a Safe Walk.</div>
+          </div>
+        </section>
+
+        <!-- REPORT CONCERN -->
+        <section class="screen on-navy" data-screen="report">
+          <div class="screen-body">
+            <div class="topbar">
+              <button class="back-btn" data-goto="home">←</button>
+              <h2>Report a Concern</h2>
+            </div>
+            <div class="subtitle">Help improve campus safety for everyone</div>
+
+            <div class="field">
+              <label>What happened?</label>
+              <input type="text" placeholder="e.g. lighting issue">
+            </div>
+            <div class="field">
+              <label>Where?</label>
+              <input type="text" placeholder="Select a location on the map">
+            </div>
+            <div class="field">
+              <label>When?</label>
+              <input type="text" placeholder="Type or choose a time">
+            </div>
+            <div class="field">
+              <label>Describe what happened</label>
+              <textarea placeholder="Share as much detail as you're comfortable with"></textarea>
+            </div>
+
+            <button class="submit-btn" data-goto="submitted">✓ Submit report</button>
+          </div>
+        </section>
+
+        <!-- REPORT SUBMITTED -->
+        <section class="screen on-white" data-screen="submitted">
+          <div class="center-col">
+            <div class="toast-pill">
+              <span class="check-badge">✓</span>
+              Report submitted
+            </div>
+            <button class="ok-btn" data-goto="home">OK</button>
+          </div>
+        </section>
+
+        <!-- SAFETY RESOURCES -->
+        <section class="screen on-navy" data-screen="resources">
+          <div class="screen-body">
+            <div class="topbar">
+              <button class="back-btn" data-goto="home">←</button>
+              <h2>Safety Resources</h2>
+            </div>
+            <div class="subtitle">Tap any line to call directly</div>
+
+            <div class="search-box">🔍 Search campus directory…</div>
+
+            <div class="res-row">
+              <span class="res-icon">📞</span>
+              <div><strong>Protection Services</strong><span>Emergency response &amp; escort services</span></div>
+            </div>
+            <div class="res-row">
+              <span class="res-icon">📞</span>
+              <div><strong>Student Counselling</strong><span>Mon–Fri, 08:00–16:30 · Crisis support</span></div>
+            </div>
+            <div class="res-row">
+              <span class="res-icon">📞</span>
+              <div><strong>Residence Support</strong><span>After-hours warden crisis response</span></div>
+            </div>
+            <div class="res-row">
+              <span class="res-icon">📞</span>
+              <div><strong>SAPS Emergency Response</strong><span>South African Police Service</span></div>
+            </div>
+            <div class="res-row">
+              <span class="res-icon">📞</span>
+              <div><strong>National GBV Helpline</strong><span>24/7 gender-based violence support</span></div>
+            </div>
+            <div class="res-row">
+              <span class="res-icon">📞</span>
+              <div><strong>After-hours Shuttle</strong><span>NMU campus connection line</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- GUARD PROFILE -->
+        <section class="screen on-navy" data-screen="profile">
+          <div class="screen-body">
+            <div class="topbar">
+              <button class="back-btn" data-goto="home">←</button>
+              <h2>Guard Profile</h2>
+            </div>
+
+            <div class="profile-card">
+              <span class="avatar-circ" style="background:#c9cdf5;color:#101a4d;">NM</span>
+              <div><strong>Nkosinathi Mthembu</strong><span>Student no. 229180000</span></div>
+            </div>
+
+            <div class="section-label">APP SETTINGS</div>
+            <div class="setting-row">
+              <div><strong>Notification preferences</strong><span>Sound &amp; vibration on trigger</span></div>
+              <span>→</span>
+            </div>
+            <div class="setting-row">
+              <div><strong>Check-in interval</strong><span>Current: every 10 min</span></div>
+              <span>→</span>
+            </div>
+            <div class="setting-row">
+              <div><strong>Location sharing</strong><span>While active or always on</span></div>
+              <span>→</span>
+            </div>
+            <div class="setting-row">
+              <div><strong>App PIN lock</strong><span>Biometrics &amp; 4-digit code</span></div>
+              <span>→</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- MORE SHEET -->
+        <div class="sheet-backdrop" id="sheetBackdrop"></div>
+        <div class="sheet" id="moreSheet">
+          <div class="sheet-handle"></div>
+          <h3>More</h3>
+          <button class="sheet-item" data-goto="report"><span class="sheet-icon">⚠️</span> Report a concern</button>
+          <button class="sheet-item" data-goto="resources"><span class="sheet-icon">📞</span> Safety resources</button>
+          <button class="sheet-item" data-goto="profile"><span class="sheet-icon">🛡️</span> Guard profile</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- BOTTOM NAV (outside viewport clipping, styled to sit at phone bottom) -->
+  </div>
+</div>
+
+<script>
+(function(){
+  const viewport = document.getElementById('viewport');
+  const screens = viewport.querySelectorAll('.screen');
+  const sheet = document.getElementById('moreSheet');
+  const sheetBackdrop = document.getElementById('sheetBackdrop');
+
+  function show(name){
+    screens.forEach(s => s.classList.toggle('active', s.dataset.screen === name));
+    closeSheet();
+    updateNav(name);
+  }
+
+  function closeSheet(){
+    sheet.classList.remove('active');
+    sheetBackdrop.classList.remove('active');
+  }
+  function openSheet(){
+    sheet.classList.add('active');
+    sheetBackdrop.classList.add('active');
+  }
+
+  document.body.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-goto]');
+    if (t){ show(t.dataset.goto); }
+  });
+
+  sheetBackdrop.addEventListener('click', closeSheet);
+
+  // SOS flow
+  const sosBtn = document.getElementById('sosBtn');
+  const ring = document.getElementById('countRing');
+  let countdownTimer = null;
+
+  function runCountdown(){
+    show('countdown');
+    let n = 3;
+    ring.textContent = n;
+    clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+      n -= 1;
+      if (n <= 0){
+        clearInterval(countdownTimer);
+        show('sosactive');
+        return;
+      }
+      ring.textContent = n;
+    }, 900);
+  }
+
+  sosBtn.addEventListener('click', runCountdown);
+
+  document.getElementById('cancelCountdown').addEventListener('click', () => {
+    clearInterval(countdownTimer);
+    show('home');
+  });
+  document.getElementById('cancelActive').addEventListener('click', () => show('home'));
+
+  // Bottom nav
+  const navMap = { home:'home', safewalk:'walk', guardians:'contacts' };
+  const navRoot = document.createElement('div');
+  navRoot.className = 'bottom-nav';
+  navRoot.innerHTML = `
+    <button class="nav-item" data-nav="home" data-goto="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      Home
+    </button>
+    <button class="nav-item" data-nav="walk" data-goto="safewalk">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2"/><path d="M9 22l1-6-3-2 2-6 4 2 3 4-2 6"/></svg>
+      Walk
+    </button>
+    <button class="nav-item" data-nav="contacts" data-goto="guardians">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+      Contacts
+    </button>
+    <button class="nav-item more" data-nav="more">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+      More
+    </button>
+  `;
+  document.querySelector('.phone').insertAdjacentElement('afterend', navRoot);
+  document.querySelector('.phone-wrap').style.display = 'flex';
+  document.querySelector('.phone-wrap').style.flexDirection = 'column';
+  document.querySelector('.phone-wrap').style.alignItems = 'center';
+  navRoot.style.width = '340px';
+  navRoot.style.maxWidth = '92vw';
+  navRoot.style.borderRadius = '0 0 22px 22px';
+  navRoot.style.marginTop = '-18px';
+  navRoot.style.paddingTop = '16px';
+  navRoot.style.position = 'relative';
+  navRoot.style.zIndex = '2';
+  navRoot.style.boxShadow = '0 24px 40px -20px rgba(0,0,0,.5)';
+
+  navRoot.addEventListener('click', (e) => {
+    const item = e.target.closest('.nav-item');
+    if (!item) return;
+    if (item.dataset.nav === 'more'){
+      sheet.classList.contains('active') ? closeSheet() : openSheet();
+      updateNav(null, true);
+      return;
+    }
+    show(item.dataset.goto);
+  });
+
+  function updateNav(screenName, moreOpen){
+    const items = navRoot.querySelectorAll('.nav-item');
+    items.forEach(i => i.classList.remove('active'));
+    if (moreOpen){
+      navRoot.querySelector('[data-nav="more"]').classList.add('active');
+      return;
+    }
+    let key = 'home';
+    if (screenName === 'safewalk') key = 'walk';
+    else if (screenName === 'guardians') key = 'contacts';
+    else if (['report','resources','profile','submitted'].includes(screenName)) key = null;
+    if (key){
+      const active = navRoot.querySelector(`[data-nav="${key}"]`);
+      if (active) active.classList.add('active');
+    }
+  }
+
+  updateNav('home');
+})();
+</script>
+</body>
+</html>
