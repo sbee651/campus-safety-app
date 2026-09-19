@@ -1,6 +1,6 @@
-# Guardian - NMU Campus Safety Prototype
+# Vigil - NMU Campus Safety Prototype
 
-Guardian is a hackathon prototype for Nelson Mandela University campus safety. It demonstrates student sign-in, SOS escalation, Safe Walk route sharing, trusted guardians, campus alerts, incident reporting, a responder dashboard, privacy notes, and a safety directory.
+Vigil is a hackathon prototype for Nelson Mandela University campus safety. It demonstrates student sign-in, terms acceptance, area-based security patrol assignment, SOS escalation, silent duress, Safe Walk route sharing, trusted contacts, campus alerts, incident reporting, a responder dashboard, privacy notes, language preference, and a safety directory.
 
 The front end is intentionally small: one `index.html` file with inline CSS and vanilla JavaScript. A thin Node/Express API in `server/` connects the signup/signin path to SQL Server when available. If the API or database is unavailable, the front end falls back to local demo state and shows an inline offline-mode note.
 
@@ -40,6 +40,7 @@ Configure `server/.env` as needed:
 - `DB_DATABASE=CampusSafetyApp`
 - `DB_TRUSTED_CONNECTION=true` for Windows trusted auth / LocalDB.
 - Or set `DB_USER`, `DB_PASSWORD`, `DB_SERVER`, `DB_DATABASE`, and optional `DB_PORT` for a full SQL Server instance.
+- Optional Resend email delivery: set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `API_PUBLIC_BASE_URL`, and any patrol/security email recipients.
 
 Quick checks:
 
@@ -50,19 +51,33 @@ Invoke-RestMethod http://localhost:3000/api/health
 The API exposes:
 
 - `GET /api/health`
+- `GET /api/patrol-coverage`
 - `POST /api/signup`
 - `POST /api/signin`
+- `POST /api/forgot-password`
+- `POST /api/reset-password`
+- `POST /api/notify-emergency`
+- `POST /api/alerts/:id/status`
+- `GET /api/analytics/summary`
 
-Password note: this prototype does not store passwords in SQL Server. The API requires the password field so the current form remains realistic, but signup stores only the student profile, and signin is an email lookup. This keeps the demo from storing plaintext passwords while avoiding a rushed production-auth implementation.
+Password note: the API stores bcrypt password hashes in `dbo.Student.PasswordHash`. It never stores plaintext passwords. Seed students in `SQLQuery1.sql` intentionally have no password hash and must use reset/change-password flow before real API sign-in.
 
 ## Data model note
 
-`SQLQuery1.sql` is the SQL Server data model for the prototype. The signup/signin path can now use the Express API to create and read `dbo.Student` rows when SQL Server is reachable. All other app features still run as browser-side simulation/local state.
+`SQLQuery1.sql` is the SQL Server data model for the prototype. The signup/signin path can now use the Express API to create and read `dbo.Student` rows, record accepted terms, store password hashes, and create an official `security-patrol` trusted contact when SQL Server is reachable. Emergency notification, alert-status, password reset, and analytics endpoints exist for demo integration, but most live response workflows are still simulated by the browser UI.
+
+## Security patrol assignment
+
+During signup, students choose their residential area. Vigil maps that area to ATLAS Security and/or CityWide Security coverage using the supplied Port Elizabeth area lists. If both providers cover the selected area, the student must choose one explicitly. The selected provider is added as an official, non-removable patrol contact.
+
+Official patrol contact numbers and email addresses still need final operational verification. Until confirmed, the prototype routes patrol contact phone links through NMU Protection Services general support (`+27 41 504 1111`) instead of inventing private staff numbers.
 
 ## Known limitations and simulated features
 
-- Authentication is not production-secure. Passwords are not stored or verified; signin is a prototype email lookup through the API when available, or a local demo fallback when unavailable.
-- SOS alerts, guardian notifications, responder acknowledgements, and report submission are simulated in the browser.
+- Authentication is now backed by SQL Server and bcrypt for the signup/signin demo slice, but there are no production sessions, MFA, account lockout policy, or full reset-password UI.
+- SOS dispatch, trusted-contact notifications, responder acknowledgements, report submission, Safe Walk location, and analytics are still demo workflows unless the local API/email/database stack is configured and reachable.
+- Silent duress is a long-press SOS prototype path. It reuses the normal SOS notification flow and marks the alert as silent in the UI, but it is not connected to a production dispatch center.
+- Language preference currently cycles the UI setting between English, isiXhosa, and Afrikaans; full app translation is not implemented.
 - Safe Walk location uses sample NMU campus zones with simulated movement, not live device GPS.
-- Directory phone links use `tel:` URLs, but no calls are placed by the app itself.
+- Directory and SOS phone links use `tel:` URLs; the user must tap the prepared call button before a call is placed.
 - Map display depends on Leaflet and remote map tiles; if they are unavailable, the Safe Walk simulation still runs with a visible fallback message.

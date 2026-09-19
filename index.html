@@ -6,7 +6,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Guardian - NMU Campus Safety Prototype</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="vigil-icon-192.png">
+<title>Vigil - NMU Campus Safety</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23101a4d'/%3E%3Cpath d='M32 10l18 7v13c0 13-8 21-18 25-10-4-18-12-18-25V17l18-7z' fill='%23f4de4e'/%3E%3Cpath d='M32 20v18M23 29h18' stroke='%23101a4d' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -198,6 +200,13 @@
     background:rgba(255,255,255,.06);border-radius:var(--radius-md);
     padding:14px 15px;margin-bottom:10px;
   }
+  .analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .analytics-card{
+    background:rgba(255,255,255,.08);border-radius:var(--radius-md);
+    padding:12px;color:var(--white);
+  }
+  .analytics-card span{display:block;color:var(--muted);font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px;}
+  .analytics-card strong{font-family:var(--font-display);font-size:20px;}
   .responder-row-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
   .responder-row strong{font-size:13.5px;}
   .responder-meta{font-size:11.5px;color:var(--muted);line-height:1.6;}
@@ -366,6 +375,11 @@
   .guardian-row strong{font-size:14.5px;color:var(--yellow-ink);}
   .guardian-row .tag{display:block;font-size:11px;color:#5c5730;margin-top:1px;font-weight:600;}
   .verified-badge{color:#1c6b34;font-size:10.5px;font-weight:800;margin-left:6px;}
+  .official-badge{
+    display:inline-flex;margin-left:6px;padding:2px 6px;border-radius:999px;
+    background:rgba(16,26,77,.12);color:var(--navy);
+    font-size:10px;font-weight:800;vertical-align:middle;
+  }
   .add-row{
     display:flex;align-items:center;gap:14px;border:2px dashed rgba(255,255,255,.18);
     border-radius:var(--radius-md);padding:14px 16px;color:var(--yellow);
@@ -409,6 +423,12 @@
     font-size:13px;font-weight:600;color:var(--white);
   }
   .checkbox-row input{width:auto;}
+  .terms-row{align-items:flex-start;line-height:1.45;margin-bottom:4px;}
+  .patrol-preview{
+    margin-top:8px;border-radius:10px;padding:10px 12px;
+    background:rgba(255,255,255,.08);color:#c7cbee;
+    font-size:11.5px;line-height:1.45;font-weight:700;
+  }
   .submit-btn{
     display:flex;align-items:center;justify-content:center;gap:9px;
     width:100%;background:var(--yellow);color:#1c6b34;border:none;
@@ -607,7 +627,7 @@
 
   <div class="intro">
     <span class="eyebrow"><span class="dot"></span> Interactive prototype</span>
-    <h1>Guardian, your campus safety companion</h1>
+    <h1>Vigil, your campus safety companion</h1>
     <p>A working click-through of the NMU safety app - SOS alerts, live Safe Walk escorting, guardian contacts, and campus reporting, all in one place.</p>
     <ul class="taplist">
       <li><span class="dot"></span><span><b>Tap the SOS circle</b> to trigger the emergency countdown and alert flow.</span></li>
@@ -625,7 +645,7 @@
         <section class="screen active on-navy" data-screen="landing">
           <div class="landing-body">
             <div class="landing-mark" data-icon="shield"></div>
-            <h1>Guardian</h1>
+            <h1>Vigil</h1>
             <p>Your campus safety companion. Sign in to see your dashboard, or create an account to get started.</p>
             <div class="landing-actions">
               <button class="landing-btn-primary" data-goto="signin">Sign in</button>
@@ -641,7 +661,7 @@
               <button class="back-btn" data-goto="landing" aria-label="Back to landing" data-icon="arrow-left"></button>
               <h2>Sign in</h2>
             </div>
-            <div class="subtitle">Welcome back to Guardian</div>
+            <div class="subtitle">Welcome back to Vigil</div>
 
             <div class="role-toggle" id="signinRoleToggle">
               <button type="button" class="active" data-role="student">Student</button>
@@ -660,6 +680,7 @@
             </div>
             <button class="submit-btn" id="signinBtn">Sign in</button>
             <div class="auth-note" id="signinAuthNote" role="status" aria-live="polite"></div>
+            <div class="auth-switch"><button type="button" id="forgotPasswordBtn">Forgot password?</button></div>
             <div class="auth-switch">Don't have an account? <button type="button" data-goto="signup">Sign up</button></div>
           </div>
         </section>
@@ -671,7 +692,7 @@
               <button class="back-btn" data-goto="landing" aria-label="Back to landing" data-icon="arrow-left"></button>
               <h2>Create account</h2>
             </div>
-            <div class="subtitle">Set up your Guardian profile</div>
+            <div class="subtitle">Set up your Vigil profile</div>
 
             <div class="field">
               <label>Full name</label>
@@ -689,9 +710,31 @@
               <div class="field-error" id="signupStudentNoError"></div>
             </div>
             <div class="field">
+              <label>Residential area</label>
+              <select id="signupArea">
+                <option value="">Choose your area</option>
+              </select>
+              <div class="field-error" id="signupAreaError"></div>
+            </div>
+            <div class="field">
+              <label>Security patrol</label>
+              <select id="signupPatrolProvider">
+                <option value="">Choose your patrol provider</option>
+              </select>
+              <div class="field-error" id="signupPatrolProviderError"></div>
+              <div class="patrol-preview" id="patrolPreview" aria-live="polite">Choose an area to see available patrol coverage.</div>
+            </div>
+            <div class="field">
               <label>Password</label>
               <input type="password" id="signupPassword" placeholder="Create a password">
               <div class="field-error" id="signupPasswordError"></div>
+            </div>
+            <div class="field">
+              <label class="checkbox-row terms-row">
+                <input type="checkbox" id="signupTerms">
+                <span>I accept the terms, privacy notice, and emergency contact rules for this prototype.</span>
+              </label>
+              <div class="field-error" id="signupTermsError"></div>
             </div>
             <button class="submit-btn" id="signupBtn">Create account</button>
             <div class="auth-note" id="signupAuthNote" role="status" aria-live="polite"></div>
@@ -745,7 +788,7 @@
         <!-- SOS COUNTDOWN -->
         <section class="screen on-navy overlay" data-screen="countdown">
           <div class="center-col">
-            <div class="badge-emergency">EMERGENCY SOS ACTIVATED</div>
+            <div class="badge-emergency" id="countdownBadge">EMERGENCY SOS ACTIVATED</div>
             <div class="status-line">ALERTING RESPONDERS SHORTLY</div>
             <div class="count-ring" id="countRing">3</div>
             <div class="live-line" id="countdownLocation">Acquiring simulated location...</div>
@@ -756,7 +799,7 @@
         <!-- SOS ACTIVE -->
         <section class="screen on-navy overlay" data-screen="sosactive">
           <div class="center-col" style="justify-content:flex-start; padding-top:36px;">
-            <div class="badge-emergency">EMERGENCY SOS ACTIVE</div>
+            <div class="badge-emergency" id="activeBadge">EMERGENCY SOS ACTIVE</div>
             <div class="info-card" style="margin-bottom:14px;">
               <span data-icon="radio"></span>
               <div>
@@ -768,7 +811,7 @@
               <div class="sos-status-item"><span class="dot-status pending"></span> Acquiring location...</div>
             </div>
             <div class="full-actions">
-              <a href="tel:+27332603333" class="btn-solid" style="text-decoration:none;"><span data-icon="phone"></span> Call campus security</a>
+              <a href="tel:+27415042009" id="sosCallLink" class="btn-solid" style="text-decoration:none;"><span data-icon="phone"></span> <span id="sosCallLabel">Call campus security</span></a>
               <button class="btn-solid" id="alertGuardiansBtn"><span data-icon="bell"></span> Alert guardians again</button>
             </div>
             <button class="btn-link" id="cancelActive">Cancel - I'm OK</button>
@@ -806,13 +849,26 @@
             </div>
 
             <div class="stream-row">
-              <span>Guardian stream active</span>
+              <span>Vigil stream active</span>
               <span class="live-tag">LIVE</span>
             </div>
 
             <button class="btn-mint" id="arrivedSafeBtn"><span data-icon="check"></span> I've arrived safely</button>
-            <button class="btn-coral-outline" data-goto="countdown"><span data-icon="alert"></span> I need help ASAP!</button>
+            <button class="btn-coral-outline" id="emergencyTypeBtn"><span data-icon="alert"></span> Emergency!</button>
+            <!-- Emergency Drop-down Menu -->
+            <div class="sheet-backdrop" id="emergencyTypeBackdrop"></div>
+            <div class="sheet" id="emergencyTypeSheet">
+              <div class="sheet-handle"></div>
+              <button class="sheet-close" id="closeEmergencyTypeBtn" type="button" aria-label="Close emergency menu" data-icon="x"></button>
+              <h3>What do you need?</h3>
+              <button class="sheet-item" data-emergency-type="ambulance"><span class="sheet-icon" data-icon="cross"></span> Ambulance</button>
+              <button class="sheet-item" data-emergency-type="police"><span class="sheet-icon" data-icon="shield"></span> Police</button>
+              <button class="sheet-item" data-emergency-type="friend"><span class="sheet-icon" data-icon="users"></span> A friend</button>
+              <button class="sheet-item" data-emergency-type="patrol"><span class="sheet-icon" data-icon="radio"></span> Security patrol</button>
+              <button class="sheet-item" data-emergency-type="general"><span class="sheet-icon" data-icon="alert"></span> General emergency</button>
+            </div>
           </div>
+
         </section>
 
         <!-- SAFETY ALERTS -->
@@ -835,6 +891,12 @@
               <h2>Responder Dashboard</h2>
             </div>
             <div class="subtitle">Campus Security - tap a status chip to advance it</div>
+            <div class="analytics-grid" id="analyticsSummary">
+              <div class="analytics-card"><span>Active alerts</span><strong id="analyticsActiveAlerts">0</strong></div>
+              <div class="analytics-card"><span>Reports</span><strong id="analyticsReports">0</strong></div>
+              <div class="analytics-card"><span>Patrol contacts</span><strong id="analyticsPatrolContacts">0</strong></div>
+              <div class="analytics-card"><span>Avg ack</span><strong id="analyticsAckTime">Demo</strong></div>
+            </div>
             <div id="responderAlertsList"></div>
           </div>
         </section>
@@ -848,7 +910,7 @@
             </div>
             <div class="privacy-section">
               <h3>What we collect</h3>
-              <p>When you trigger an SOS or start a Safe Walk, Guardian shares your approximate location, the time, and your student identifier with Campus Protection Services and the trusted guardians you've added. Incident reports collect only what you choose to enter, and can be submitted anonymously.</p>
+              <p>When you trigger an SOS or start a Safe Walk, Vigil shares your approximate location, the time, and your student identifier with Campus Protection Services and the trusted guardians you've added. Incident reports collect only what you choose to enter, and can be submitted anonymously.</p>
             </div>
             <div class="privacy-section">
               <h3>Who can see it</h3>
@@ -866,7 +928,7 @@
           <div class="screen-body">
             <div class="topbar">
               <button class="back-btn" data-goto="home" aria-label="Back to home" data-icon="arrow-left"></button>
-              <h2>My Guardians</h2>
+              <h2>My Contacts</h2>
             </div>
             <div class="subtitle">These contacts are notified during SOS and Safe Walk check-ins</div>
 
@@ -974,6 +1036,10 @@
             <div class="setting-row" id="pinLockRow">
               <div><strong>App PIN lock</strong><span>Biometrics &amp; 4-digit code</span></div>
               <span class="setting-value" id="pinLockValue">On</span>
+            </div>
+            <div class="setting-row" id="languageRow">
+              <div><strong>Language</strong><span id="languageValue">English</span></div>
+              <span data-icon="chevron-right"></span>
             </div>
 
             <button class="btn-coral-outline" id="logoutBtn" style="margin-top:8px;">Log out</button>
@@ -1095,7 +1161,8 @@
       notifications: true,
       checkinInterval: 10,
       locationSharing: 'While active',
-      pinLock: true
+      pinLock: true,
+      language: 'English'
     },
     currentSOS: null,
     currentWalk: null,
@@ -1120,6 +1187,79 @@
   };
 
   const STATUS_CYCLE = ['New', 'Acknowledged', 'ResponderDispatched', 'Resolved'];
+  const PATROL_PROVIDERS = {
+    atlas: {
+      id: 'atlas',
+      name: 'ATLAS Security',
+      phone: '+27 41 504 1111',
+      email: '',
+      note: 'Coverage confirmed for this area. Calls route through Protection Services until the official patrol hotline is verified.'
+    },
+    citywide: {
+      id: 'citywide',
+      name: 'CityWide Security',
+      phone: '+27 41 504 1111',
+      email: '',
+      note: 'Coverage confirmed for this area. Calls route through Protection Services until the official patrol hotline is verified.'
+    }
+  };
+  const PATROL_AREAS = [
+    { area: 'Summerstrand', providers: ['atlas', 'citywide'] },
+    { area: 'South End', providers: ['atlas'] },
+    { area: 'Walmer', providers: ['atlas', 'citywide'] },
+    { area: 'Mount Pleasant', providers: ['atlas'] },
+    { area: 'Newton Park', providers: ['atlas', 'citywide'] },
+    { area: 'North End', providers: ['atlas', 'citywide'] },
+    { area: 'Lorraine', providers: ['atlas', 'citywide'] },
+    { area: 'Overbaakens', providers: ['atlas', 'citywide'] },
+    { area: 'Sunridge Park', providers: ['atlas'] },
+    { area: 'Fernglen', providers: ['atlas'] },
+    { area: 'Framesby', providers: ['atlas'] },
+    { area: 'Rowallan Park', providers: ['atlas'] },
+    { area: 'Parsons Vlei', providers: ['atlas'] },
+    { area: 'Linton Grange', providers: ['atlas', 'citywide'] },
+    { area: 'Westering', providers: ['atlas', 'citywide'] },
+    { area: 'Sherwood', providers: ['atlas', 'citywide'] },
+    { area: 'Cotswold', providers: ['atlas', 'citywide'] },
+    { area: 'Sydenham', providers: ['atlas'] },
+    { area: 'Humewood', providers: ['atlas', 'citywide'] },
+    { area: 'Humerail', providers: ['atlas', 'citywide'] },
+    { area: 'Bluewater Bay', providers: ['atlas'] },
+    { area: 'Swartkops', providers: ['atlas'] },
+    { area: 'Coega', providers: ['atlas'] },
+    { area: 'Greenbushes', providers: ['atlas'] },
+    { area: 'Seaview', providers: ['atlas'] },
+    { area: 'Theescombe', providers: ['atlas'] },
+    { area: 'Kariega / Uitenhage', providers: ['atlas'] },
+    { area: 'Despatch', providers: ['atlas'] },
+    { area: 'Walmer Downs', providers: ['citywide'] },
+    { area: 'Walmer Heights', providers: ['citywide'] },
+    { area: 'Miramar', providers: ['citywide'] },
+    { area: 'Central', providers: ['citywide'] },
+    { area: 'St Georges Park', providers: ['citywide'] },
+    { area: 'Mount Croix', providers: ['citywide'] },
+    { area: 'Richmond Hill', providers: ['citywide'] },
+    { area: 'Kamma Park', providers: ['citywide'] },
+    { area: 'Ben Kamma', providers: ['citywide'] },
+    { area: 'Kamma Heights', providers: ['citywide'] },
+    { area: 'Kamma Ridge', providers: ['citywide'] },
+    { area: 'Lovemore Heights', providers: ['citywide'] },
+    { area: 'Lovemore Park', providers: ['citywide'] },
+    { area: 'Salisbury Park', providers: ['citywide'] },
+    { area: 'Greenacres', providers: ['citywide'] },
+    { area: 'Mill Park', providers: ['citywide'] },
+    { area: 'Glendinningvale', providers: ['citywide'] },
+    { area: 'Mount Road', providers: ['citywide'] },
+    { area: 'Kabega Park', providers: ['citywide'] },
+    { area: 'Kunene Park', providers: ['citywide'] },
+    { area: 'Parsonvlei', providers: ['citywide'] },
+    { area: 'Charlo', providers: ['citywide'] },
+    { area: 'Broadwood', providers: ['citywide'] },
+    { area: 'Brymore', providers: ['citywide'] },
+    { area: 'Greenshields Park', providers: ['citywide'] },
+    { area: 'Adcockvale', providers: ['citywide'] },
+    { area: 'Perridgevale', providers: ['citywide'] }
+  ].sort((a, b) => a.area.localeCompare(b.area));
 
   // ============================================================
   // DOM REFS
@@ -1132,6 +1272,7 @@
 
   // UTILITIES
   const ICONS = {
+    cross: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>',
     shield: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/><path d="M12 8v8M8 12h8"/></svg>',
     'arrow-left': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>',
     route: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h5a3 3 0 0 1 0 6h-2a3 3 0 0 0 0 6h5"/></svg>',
@@ -1226,17 +1367,98 @@
     }
   }
 
-  function applyStudentRecord(student, fallback){
+  async function getApi(path){
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    try {
+      const response = await fetch(`${API_BASE_URL}${path}`, { signal: controller.signal });
+      let data = {};
+      try {
+        data = await response.json();
+      } catch(e) {
+        data = {};
+      }
+      if (!response.ok) {
+        const error = new Error(data.error || 'API request failed.');
+        error.status = response.status;
+        error.data = data;
+        throw error;
+      }
+      return data;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function getPatrolArea(areaName){
+    return PATROL_AREAS.find(entry => entry.area === areaName);
+  }
+
+  function createPatrolContact(areaName, providerId){
+    const provider = PATROL_PROVIDERS[providerId];
+    if (!provider || !areaName) return null;
+    return {
+      id: `patrol-${provider.id}`,
+      name: provider.name,
+      phone: provider.phone,
+      email: provider.email,
+      relation: `Official patrol - ${areaName}`,
+      contactType: 'security-patrol',
+      official: true,
+      verified: true,
+      initials: provider.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase(),
+      note: provider.note
+    };
+  }
+
+  function setOfficialPatrolContact(contact){
+    if (!contact) return;
+    state.guardians = state.guardians.filter(g => g.contactType !== 'security-patrol' && !g.official);
+    state.guardians.unshift(Object.assign({ verified: true, official: true, contactType: 'security-patrol' }, contact));
+    saveState();
+  }
+
+  function applyStudentRecord(student, fallback, contacts){
     if (student && student.name) state.user.name = student.name;
     if (student && student.studentNo) state.user.studentNo = student.studentNo;
     if (student && student.email) state.user.email = student.email;
     if (fallback && fallback.name) state.user.name = fallback.name;
     if (fallback && fallback.studentNo) state.user.studentNo = fallback.studentNo;
+    if (fallback && fallback.email) state.user.email = fallback.email;
+    if (fallback && fallback.area) state.user.area = fallback.area;
+    if (fallback && fallback.patrolProvider) state.user.patrolProvider = fallback.patrolProvider;
+    if (Array.isArray(contacts) && contacts.length){
+      contacts.forEach(contact => {
+        if (contact && contact.contactType === 'security-patrol') {
+          setOfficialPatrolContact(contact);
+        }
+      });
+    }
     renderSettings();
   }
 
   function shouldUseOfflineFallback(error){
     return !error.status || error.status >= 500 || error.name === 'AbortError';
+  }
+
+  async function notifyEmergency(emergencyType, location){
+    const patrol = state.guardians.find(g => g.contactType === 'security-patrol' || g.official);
+    const recipients = state.guardians.map(g => g.email).filter(Boolean);
+    if (patrol && patrol.email) recipients.push(patrol.email);
+
+    try {
+      const result = await callApi('/api/notify-emergency', {
+        studentName: state.user.name,
+        studentNo: state.user.studentNo,
+        emergencyType,
+        location,
+        recipients
+      });
+      if (result.sent) showToast('Emergency email notification sent.');
+      else showToast('Emergency notification simulated. Email service is not configured.');
+    } catch(error) {
+      showToast('Emergency notification simulated. API is unavailable.');
+    }
   }
   
   function pad(n){ return String(n).padStart(2,'0'); }
@@ -1254,7 +1476,8 @@
   }
   function saveState(){
     try {
-      localStorage.setItem('guardian_state', JSON.stringify({
+      localStorage.setItem('vigil_state', JSON.stringify({
+        user: state.user,
         guardians: state.guardians,
         settings: state.settings,
         reports: state.reports
@@ -1263,10 +1486,11 @@
   }
   function loadState(){
     try {
-      const raw = localStorage.getItem('guardian_state');
+      const raw = localStorage.getItem('vigil_state');
       if (!raw) return;
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object') return;
+      if (parsed.user && typeof parsed.user === 'object') state.user = Object.assign(state.user, parsed.user);
       if (Array.isArray(parsed.guardians)) state.guardians = parsed.guardians;
       if (parsed.settings && typeof parsed.settings === 'object') state.settings = Object.assign(state.settings, parsed.settings);
       if (Array.isArray(parsed.reports)) state.reports = parsed.reports;
@@ -1319,6 +1543,67 @@
     sheet.classList.add('active');
     sheetBackdrop.classList.add('active');
   }
+//JavaScript For the Emergency drop-down
+// EMERGENCY TYPE SHEET
+const emergencyTypeSheet = document.getElementById('emergencyTypeSheet');
+const emergencyTypeBackdrop = document.getElementById('emergencyTypeBackdrop');
+let selectedEmergencyType = 'general';
+
+const EMERGENCY_LABELS = {
+  ambulance: 'Ambulance requested',
+  police: 'Police requested',
+  friend: 'Friend alerted',
+  patrol: 'Security patrol requested',
+  general: 'General emergency'
+};
+function getEmergencyCallInfo(type){
+  if (type === 'friend') {
+    const g = state.guardians[0];
+    return g ? { number: g.phone, label: `Call ${g.name}` } : { number: null, label: 'Call guardian' };
+  }
+  const map = {
+    ambulance: { number: '10177', label: 'Call ambulance' },
+    police: { number: '10111', label: 'Call police' },
+    patrol: { number: '+27 41 504 2009', label: 'Call security patrol' },
+    general: { number: '+27 41 504 2009', label: 'Call campus security' }
+  };
+  return map[type] || map.general;
+}
+
+function prepareEmergencyCall(){
+  const info = getEmergencyCallInfo(selectedEmergencyType);
+  const link = document.getElementById('sosCallLink');
+  const label = document.getElementById('sosCallLabel');
+  if (!info.number) {
+    if (label) label.textContent = info.label;
+    if (link) link.removeAttribute('href');
+    return;
+  }
+  const dialTarget = `tel:${info.number.replace(/\s/g,'')}`;
+  if (link) link.href = dialTarget;
+  if (label) label.textContent = info.label;
+}
+
+function openEmergencyTypeSheet(){
+  emergencyTypeSheet.classList.add('active');
+  emergencyTypeBackdrop.classList.add('active');
+}
+function closeEmergencyTypeSheet(){
+  emergencyTypeSheet.classList.remove('active');
+  emergencyTypeBackdrop.classList.remove('active');
+}
+
+document.getElementById('emergencyTypeBtn').addEventListener('click', openEmergencyTypeSheet);
+document.getElementById('closeEmergencyTypeBtn').addEventListener('click', closeEmergencyTypeSheet);
+emergencyTypeBackdrop.addEventListener('click', closeEmergencyTypeSheet);
+
+emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedEmergencyType = btn.dataset.emergencyType;
+    closeEmergencyTypeSheet();
+    runCountdown();
+  });
+});
 
   document.body.addEventListener('click', (e) => {
     const t = e.target.closest('[data-goto]');
@@ -1383,6 +1668,71 @@
       signinRole = btn.dataset.role;
       signinRoleToggle.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
     });
+  }
+
+  function initPatrolSignup(){
+    const areaSelect = document.getElementById('signupArea');
+    const patrolSelect = document.getElementById('signupPatrolProvider');
+    if (!areaSelect || !patrolSelect) return;
+
+    PATROL_AREAS.forEach(entry => {
+      const option = document.createElement('option');
+      option.value = entry.area;
+      option.textContent = entry.area;
+      areaSelect.appendChild(option);
+    });
+
+    areaSelect.addEventListener('change', updatePatrolOptions);
+    patrolSelect.addEventListener('change', updatePatrolPreview);
+    updatePatrolOptions();
+  }
+
+  function updatePatrolOptions(){
+    const areaSelect = document.getElementById('signupArea');
+    const patrolSelect = document.getElementById('signupPatrolProvider');
+    if (!areaSelect || !patrolSelect) return;
+    const selectedArea = getPatrolArea(areaSelect.value);
+    patrolSelect.innerHTML = '<option value="">Choose your patrol provider</option>';
+
+    if (selectedArea){
+      selectedArea.providers.forEach(providerId => {
+        const provider = PATROL_PROVIDERS[providerId];
+        const option = document.createElement('option');
+        option.value = provider.id;
+        option.textContent = provider.name;
+        patrolSelect.appendChild(option);
+      });
+      if (selectedArea.providers.length === 1) {
+        patrolSelect.value = selectedArea.providers[0];
+      }
+    }
+    updatePatrolPreview();
+  }
+
+  function getSelectedPatrol(){
+    const area = document.getElementById('signupArea').value;
+    const providerId = document.getElementById('signupPatrolProvider').value;
+    const coverage = getPatrolArea(area);
+    const provider = PATROL_PROVIDERS[providerId];
+    if (!coverage || !provider || !coverage.providers.includes(providerId)) return null;
+    return { area: coverage.area, provider };
+  }
+
+  function updatePatrolPreview(){
+    const preview = document.getElementById('patrolPreview');
+    const area = document.getElementById('signupArea').value;
+    const patrol = getSelectedPatrol();
+    const coverage = getPatrolArea(area);
+    if (!preview) return;
+    if (!coverage){
+      preview.textContent = 'Choose an area to see available patrol coverage.';
+      return;
+    }
+    if (!patrol){
+      preview.textContent = `${coverage.area} is covered by ${coverage.providers.map(id => PATROL_PROVIDERS[id].name).join(' and ')}. Choose the official patrol contact to add.`;
+      return;
+    }
+    preview.textContent = `${patrol.provider.name} will be added as your official patrol contact for ${patrol.area}. ${patrol.provider.note}`;
   }
 
   
@@ -1563,6 +1913,7 @@
   }
 
   function renderResponderAlerts(){
+    renderAnalyticsSummary();
     const list = document.getElementById('responderAlertsList');
     if (!list) return;
     list.innerHTML = '';
@@ -1582,6 +1933,27 @@
       `;
       list.appendChild(row);
     });
+  }
+
+  async function renderAnalyticsSummary(){
+    const activeAlerts = state.sosAlerts.filter(a => !['Resolved', 'FalseAlarm'].includes(a.status)).length;
+    const patrolContacts = state.guardians.filter(g => g.contactType === 'security-patrol' || g.official).length;
+    document.getElementById('analyticsActiveAlerts').textContent = activeAlerts;
+    document.getElementById('analyticsReports').textContent = state.reports.length;
+    document.getElementById('analyticsPatrolContacts').textContent = patrolContacts;
+    document.getElementById('analyticsAckTime').textContent = 'Demo';
+
+    try {
+      const result = await getApi('/api/analytics/summary');
+      if (!result.summary) return;
+      document.getElementById('analyticsActiveAlerts').textContent = result.summary.totalAlerts ?? activeAlerts;
+      document.getElementById('analyticsReports').textContent = result.summary.totalReports ?? state.reports.length;
+      document.getElementById('analyticsPatrolContacts').textContent = result.summary.officialPatrolContacts ?? patrolContacts;
+      const seconds = Number(result.summary.avgAckSeconds);
+      document.getElementById('analyticsAckTime').textContent = Number.isFinite(seconds) ? `${Math.round(seconds)}s` : 'Demo';
+    } catch(error) {
+      // Local demo counts remain visible when the API or database is unavailable.
+    }
   }
 
   // Tap a status chip on the responder dashboard to advance its status
@@ -1606,15 +1978,21 @@
   const ring = document.getElementById('countRing');
   let countdownTimer = null;
   let countdownValue = 3;
+  let duressTimer = null;
+  let duressArmed = false;
+  let silentSOS = false;
 
-  function runCountdown(){
+  function runCountdown(options = {}){
+    silentSOS = Boolean(options.silent);
+    selectedEmergencyType = silentSOS ? 'patrol' : selectedEmergencyType;
     const zone = getZone(state.currentZone || 'library');
     document.getElementById('countdownLocation').textContent =
-      `Simulated location: ${zone.name}`;
+      silentSOS ? 'Silent alert armed - keep your screen calm' : `Simulated location: ${zone.name}`;
     state.livePosition = [jitter(zone.lat, 0.0004), jitter(zone.lng, 0.0004)];
     state.liveAccuracy = 9;
 
     show('countdown');
+    document.getElementById('countdownBadge').textContent = silentSOS ? 'SILENT DURESS ALERT' : EMERGENCY_LABELS[selectedEmergencyType].toUpperCase();
     countdownValue = 3;
     ring.textContent = countdownValue;
     clearInterval(countdownTimer);
@@ -1629,7 +2007,26 @@
     }, 900);
   }
 
-  sosBtn.addEventListener('click', runCountdown);
+  sosBtn.addEventListener('pointerdown', () => {
+    duressArmed = false;
+    clearTimeout(duressTimer);
+    duressTimer = setTimeout(() => {
+      duressArmed = true;
+      runCountdown({ silent: true });
+    }, 1400);
+  });
+
+  ['pointerup','pointercancel','pointerleave'].forEach(eventName => {
+    sosBtn.addEventListener(eventName, () => clearTimeout(duressTimer));
+  });
+
+  sosBtn.addEventListener('click', () => {
+    if (duressArmed) {
+      duressArmed = false;
+      return;
+    }
+    runCountdown();
+  });
 
   document.getElementById('cancelCountdown').addEventListener('click', () => {
     clearInterval(countdownTimer);
@@ -1638,12 +2035,14 @@
   });
 
   function activateSOS(){
+    document.getElementById('activeBadge').textContent = silentSOS ? 'SILENT DURESS ALERT ACTIVE' : EMERGENCY_LABELS[selectedEmergencyType].toUpperCase();
     const incidentId = genId('G', 20000, 99999);
     const zone = getZone(state.currentZone || 'library');
     state.currentSOS = {
       id: incidentId,
       startedAt: new Date(),
       status: 'active',
+      silent: silentSOS,
       location: state.livePosition ? [...state.livePosition] : null,
       accuracy: state.liveAccuracy,
       zoneName: zone.name
@@ -1654,12 +2053,12 @@
     state.sosAlerts.unshift({
       id: incidentId,
       studentLabel: state.user.name,
-      type: 'Panic Alert',
+      type: silentSOS ? 'Silent Duress Alert' : 'Panic Alert',
       location: `Near ${zone.name}`,
       time: nowTime(),
       status: 'New',
       responder: 'Pending',
-      notes: 'Help request sent. Campus security has been notified in this simulation.'
+      notes: silentSOS ? 'Silent duress signal sent. Screen remains low-key in this simulation.' : 'Help request sent. Campus security has been notified in this simulation.'
     });
     renderResponderAlerts();
 
@@ -1669,13 +2068,15 @@
     // Build status list
     const list = document.getElementById('sosStatusList');
     list.innerHTML = `
-      <div class="sos-status-item"><span class="dot-status sent"></span> SOS triggered</div>
+      <div class="sos-status-item"><span class="dot-status sent"></span> ${silentSOS ? 'Silent duress triggered' : 'SOS triggered'}</div>
       <div class="sos-status-item"><span class="dot-status pending"></span> Sharing simulated location...</div>
       <div class="sos-status-item"><span class="dot-status pending"></span> Notifying Campus Protection...</div>
       <div class="sos-status-item"><span class="dot-status pending"></span> Notifying ${state.guardians.length} guardians...</div>
     `;
 
     show('sosactive');
+    prepareEmergencyCall();
+    notifyEmergency(silentSOS ? 'silent-duress' : 'sos', `Near ${zone.name} (simulated)`);
 
     // Simulate async status progression
     setTimeout(() => {
@@ -1762,13 +2163,19 @@
       state.guardians.forEach(g => {
         const row = document.createElement('div');
         row.className = 'guardian-row';
+        const badge = g.official || g.contactType === 'security-patrol'
+          ? '<span class="official-badge">Official patrol</span>'
+          : (g.verified ? '<span class="verified-badge">Verified</span>' : '');
+        const removeButton = g.official || g.contactType === 'security-patrol'
+          ? ''
+          : `<button class="remove-btn" data-remove="${g.id}" aria-label="Remove ${g.name}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>`;
         row.innerHTML = `
           <span class="avatar-circ">${g.initials || g.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()}</span>
           <div>
-            <strong>${g.name}${g.verified ? '<span class="verified-badge">Verified</span>' : ''}</strong>
+            <strong>${g.name}${badge}</strong>
             <span class="tag">${g.relation} - ${g.phone}</span>
           </div>
-          <button class="remove-btn" data-remove="${g.id}" aria-label="Remove ${g.name}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+          ${removeButton}
         `;
         list.appendChild(row);
       });
@@ -1785,7 +2192,7 @@
     state.guardians = state.guardians.filter(g => g.id !== id);
     saveState();
     renderGuardians();
-    showToast('Guardian contact removed.');
+    showToast('Trusted contact removed.');
   });
 
   document.getElementById('addGuardianBtn').addEventListener('click', () => {
@@ -1905,6 +2312,7 @@
     document.getElementById('checkinValue').textContent = state.settings.checkinInterval;
     document.getElementById('locationSharingValue').textContent = state.settings.locationSharing;
     document.getElementById('pinLockValue').textContent = state.settings.pinLock ? 'On' : 'Off';
+    document.getElementById('languageValue').textContent = state.settings.language;
     document.getElementById('profileName').textContent = state.user.name;
     document.getElementById('profileStudentNo').textContent = `Student no. ${state.user.studentNo}`;
     document.getElementById('profileInitials').textContent =
@@ -1942,6 +2350,15 @@
     saveState();
     renderSettings();
     showToast(`App PIN lock ${state.settings.pinLock ? 'on' : 'off'}.`);
+  });
+
+  document.getElementById('languageRow').addEventListener('click', () => {
+    const options = ['English', 'isiXhosa', 'Afrikaans'];
+    const idx = options.indexOf(state.settings.language);
+    state.settings.language = options[(idx + 1) % options.length];
+    saveState();
+    renderSettings();
+    showToast(`Language preference set to ${state.settings.language}. Full translation is simulated.`);
   });
 
   // SAFE WALK ACTIONS
@@ -2005,7 +2422,10 @@
     const email = document.getElementById('signupEmail').value.trim();
     const studentNo = document.getElementById('signupStudentNo').value.trim();
     const password = document.getElementById('signupPassword').value.trim();
-    ['signupName','signupEmail','signupStudentNo','signupPassword'].forEach(clearFieldError);
+    const area = document.getElementById('signupArea').value;
+    const patrolProvider = document.getElementById('signupPatrolProvider').value;
+    const termsAccepted = document.getElementById('signupTerms').checked;
+    ['signupName','signupEmail','signupStudentNo','signupArea','signupPatrolProvider','signupPassword','signupTerms'].forEach(clearFieldError);
     let valid = true;
     if (!name){
       setFieldError('signupName', 'Enter your full name.');
@@ -2029,6 +2449,18 @@
       setFieldError('signupPassword', 'Create a password.');
       valid = false;
     }
+    if (!area){
+      setFieldError('signupArea', 'Choose your residential area.');
+      valid = false;
+    }
+    if (!patrolProvider || !getSelectedPatrol()){
+      setFieldError('signupPatrolProvider', 'Choose a patrol provider for your area.');
+      valid = false;
+    }
+    if (!termsAccepted){
+      setFieldError('signupTerms', 'Accept the terms and privacy notice to continue.');
+      valid = false;
+    }
     return valid;
   }
 
@@ -2037,35 +2469,65 @@
   document.getElementById('signupName').addEventListener('blur', validateSignup);
   document.getElementById('signupEmail').addEventListener('blur', validateSignup);
   document.getElementById('signupStudentNo').addEventListener('blur', validateSignup);
+  document.getElementById('signupArea').addEventListener('blur', validateSignup);
+  document.getElementById('signupPatrolProvider').addEventListener('blur', validateSignup);
   document.getElementById('signupPassword').addEventListener('blur', validateSignup);
+  document.getElementById('signupTerms').addEventListener('change', validateSignup);
+
+  document.getElementById('forgotPasswordBtn').addEventListener('click', async () => {
+    const email = document.getElementById('signinEmail').value.trim();
+    clearFieldError('signinEmail');
+    setAuthNote('signinAuthNote', '');
+    if (!email){
+      setFieldError('signinEmail', 'Enter your NMU student email first.');
+      return;
+    }
+    if (!isMandelaEmail(email)){
+      setFieldError('signinEmail', 'Use your @mandela.ac.za student email.');
+      return;
+    }
+    try {
+      const result = await callApi('/api/forgot-password', { email });
+      setAuthNote('signinAuthNote', result.message || 'If that account exists, a reset email has been queued.');
+    } catch(error) {
+      if (shouldUseOfflineFallback(error)) {
+        setAuthNote('signinAuthNote', 'Password reset needs the API and email service. Continue with offline demo mode if needed.');
+      } else if (error.data && error.data.errors && error.data.errors.email) {
+        setFieldError('signinEmail', error.data.errors.email);
+      } else {
+        setAuthNote('signinAuthNote', error.message || 'Could not request a password reset.');
+      }
+    }
+  });
   
   document.getElementById('signinBtn').addEventListener('click', async () => {
-    if (!validateSignin()) return;
     setAuthNote('signinAuthNote', '');
     const btn = document.getElementById('signinBtn');
     const originalText = btn.textContent;
     const email = document.getElementById('signinEmail').value.trim();
     const password = document.getElementById('signinPassword').value.trim();
-    btn.disabled = true;
-    btn.textContent = 'Signing in...';
     if (signinRole === 'security'){
-      btn.disabled = false;
-      btn.textContent = originalText;
+      clearFieldError('signinEmail');
+      clearFieldError('signinPassword');
       show('dashboard');
       return;
     }
 
+    if (!validateSignin()) return;
+    btn.disabled = true;
+    btn.textContent = 'Signing in...';
+
     try {
       const result = await callApi('/api/signin', { email, password });
-      applyStudentRecord(result.student);
+      applyStudentRecord(result.student, null, result.contacts);
       show('home');
     } catch(error) {
       if (shouldUseOfflineFallback(error)) {
         setAuthNote('signinAuthNote', 'API or database unavailable. Continuing in offline demo mode with local browser state.');
         applyStudentRecord(null, { name: state.user.name, studentNo: state.user.studentNo });
         show('home');
-      } else if (error.status === 404) {
-        setFieldError('signinEmail', 'No SQL student record was found for this email.');
+      } else if (error.status === 401 || error.status === 404) {
+        setFieldError('signinEmail', 'Invalid email or password.');
       } else if (error.data && error.data.errors) {
         if (error.data.errors.email) setFieldError('signinEmail', error.data.errors.email);
         if (error.data.errors.password) setFieldError('signinPassword', error.data.errors.password);
@@ -2083,6 +2545,9 @@
     const email = document.getElementById('signupEmail').value.trim();
     const studentNo = document.getElementById('signupStudentNo').value.trim();
     const password = document.getElementById('signupPassword').value.trim();
+    const area = document.getElementById('signupArea').value;
+    const patrolProvider = document.getElementById('signupPatrolProvider').value;
+    const termsAccepted = document.getElementById('signupTerms').checked;
     if (!validateSignup()) return;
     setAuthNote('signupAuthNote', '');
     const btn = document.getElementById('signupBtn');
@@ -2091,13 +2556,15 @@
     btn.textContent = 'Creating account...';
 
     try {
-      const result = await callApi('/api/signup', { name, email, studentNo, password });
-      applyStudentRecord(result.student, { name, studentNo });
+      const result = await callApi('/api/signup', { name, email, studentNo, password, area, patrolProvider, termsAccepted });
+      applyStudentRecord(result.student, { name, studentNo, email, area, patrolProvider }, result.contacts || (result.patrolContact ? [result.patrolContact] : []));
       show('home');
     } catch(error) {
       if (shouldUseOfflineFallback(error)) {
+        const offlinePatrol = createPatrolContact(area, patrolProvider);
+        setOfficialPatrolContact(offlinePatrol);
         setAuthNote('signupAuthNote', 'API or database unavailable. Account is running in offline demo mode and was not saved to SQL Server.');
-        applyStudentRecord(null, { name, studentNo, email });
+        applyStudentRecord(null, { name, studentNo, email, area, patrolProvider });
         show('home');
       } else if (error.status === 409) {
         setFieldError('signupEmail', 'That email or student number already exists in SQL Server.');
@@ -2106,7 +2573,10 @@
         if (error.data.errors.name) setFieldError('signupName', error.data.errors.name);
         if (error.data.errors.email) setFieldError('signupEmail', error.data.errors.email);
         if (error.data.errors.studentNo) setFieldError('signupStudentNo', error.data.errors.studentNo);
+        if (error.data.errors.area) setFieldError('signupArea', error.data.errors.area);
+        if (error.data.errors.patrolProvider) setFieldError('signupPatrolProvider', error.data.errors.patrolProvider);
         if (error.data.errors.password) setFieldError('signupPassword', error.data.errors.password);
+        if (error.data.errors.terms) setFieldError('signupTerms', error.data.errors.terms);
       } else {
         setAuthNote('signupAuthNote', error.message || 'Could not create the account through the API.');
       }
@@ -2129,6 +2599,7 @@
   // INIT
   
   state.currentZone = state.campusZones[0].id;
+  initPatrolSignup();
   loadState();
   injectIcons(document);
   renderGuardians();
@@ -2142,7 +2613,7 @@
     `NMU Main Campus - Location sharing simulated`;
 
   // Expose for debugging
-  window.__guardian = state;
+  window.__vigil = state;
 })();
 </script>
 </body>

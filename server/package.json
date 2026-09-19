@@ -1,24 +1,27 @@
 {
-  "name": "guardian-campus-safety-api",
+  "name": "vigil-campus-safety-api",
   "version": "1.0.0",
-  "description": "Thin SQL Server API for the Guardian hackathon prototype",
+  "description": "Thin SQL Server API for the Vigil hackathon prototype",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "node src/index.js"
   },
   "keywords": [
-    "guardian",
+    "vigil",
     "campus-safety",
     "sql-server"
   ],
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.7.0",
     "msnodesqlv8": "^5.5.0",
-    "mssql": "^11.0.1"
+    "mssql": "^11.0.1",
+    "resend": "^6.28.1"
   }
 }

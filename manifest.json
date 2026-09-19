@@ -1,0 +1,21 @@
+{
+  "name": "Vigil — NMU Campus Safety",
+  "short_name": "Vigil",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101a4d",
+  "theme_color": "#101a4d",
+  "icons": [
+    {
+      "src": "vigil-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "vigil-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

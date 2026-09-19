@@ -1,5 +1,5 @@
 /*
-Guardian production data model prototype.
+Vigil production data model prototype.
 
 This script is intentionally idempotent and non-destructive: it creates the
 database and tables only when they do not already exist, preserves existing
@@ -23,6 +23,8 @@ BEGIN
         Name NVARCHAR(100),
         Email NVARCHAR(100),
         StudentNumber CHAR(9),
+        PasswordHash NVARCHAR(255),
+        TermsAcceptedAt DATETIME,
         Programme NVARCHAR(100),
         EmergencyPreference NVARCHAR(50),
         CONSTRAINT CK_Student_Email_Mandela CHECK (Email IS NULL OR LOWER(Email) LIKE N'%@mandela.ac.za'),
@@ -41,6 +43,16 @@ END;
 IF COL_LENGTH(N'dbo.Student', N'StudentNumber') IS NULL
 BEGIN
     ALTER TABLE dbo.Student ADD StudentNumber CHAR(9) NULL;
+END;
+
+IF COL_LENGTH(N'dbo.Student', N'PasswordHash') IS NULL
+BEGIN
+    ALTER TABLE dbo.Student ADD PasswordHash NVARCHAR(255) NULL;
+END;
+
+IF COL_LENGTH(N'dbo.Student', N'TermsAcceptedAt') IS NULL
+BEGIN
+    ALTER TABLE dbo.Student ADD TermsAcceptedAt DATETIME NULL;
 END;
 GO
 
@@ -108,8 +120,30 @@ BEGIN
         Relationship NVARCHAR(50),
         Phone NVARCHAR(20),
         Email NVARCHAR(100),
-        PreferredAlertMethod NVARCHAR(50)
+        PreferredAlertMethod NVARCHAR(50),
+        ContactType NVARCHAR(30) NOT NULL CONSTRAINT DF_TrustedContact_ContactType DEFAULT N'personal'
     );
+END;
+GO
+
+IF COL_LENGTH(N'dbo.TrustedContact', N'ContactType') IS NULL
+BEGIN
+    ALTER TABLE dbo.TrustedContact
+    ADD ContactType NVARCHAR(30) NOT NULL
+        CONSTRAINT DF_TrustedContact_ContactType DEFAULT N'personal';
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.check_constraints
+    WHERE name = N'CK_TrustedContact_ContactType'
+      AND parent_object_id = OBJECT_ID(N'dbo.TrustedContact')
+)
+BEGIN
+    ALTER TABLE dbo.TrustedContact
+    ADD CONSTRAINT CK_TrustedContact_ContactType
+    CHECK (ContactType IN (N'personal', N'security-patrol'));
 END;
 GO
 
@@ -121,6 +155,7 @@ BEGIN
         AlertType NVARCHAR(50),
         Location NVARCHAR(100),
         TriggeredAt DATETIME,
+        AcknowledgedAt DATETIME,
         Status NVARCHAR(50),
         AssignedResponder NVARCHAR(100),
         Notes NVARCHAR(MAX)
@@ -130,6 +165,12 @@ ELSE IF COL_LENGTH(N'dbo.EmergencyAlert', N'TimeTriggered') IS NOT NULL
      AND COL_LENGTH(N'dbo.EmergencyAlert', N'TriggeredAt') IS NULL
 BEGIN
     EXEC sp_rename N'dbo.EmergencyAlert.TimeTriggered', N'TriggeredAt', N'COLUMN';
+END;
+GO
+
+IF COL_LENGTH(N'dbo.EmergencyAlert', N'AcknowledgedAt') IS NULL
+BEGIN
+    ALTER TABLE dbo.EmergencyAlert ADD AcknowledgedAt DATETIME NULL;
 END;
 GO
 
@@ -199,8 +240,8 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM dbo.Student WHERE Name = N'Demo Student')
 BEGIN
-    INSERT INTO dbo.Student (Name, Email, StudentNumber, Programme, EmergencyPreference)
-    VALUES (N'Demo Student', N'demo.student@mandela.ac.za', N'229180000', N'Computer Science', N'SMS');
+    INSERT INTO dbo.Student (Name, Email, StudentNumber, PasswordHash, TermsAcceptedAt, Programme, EmergencyPreference)
+    VALUES (N'Demo Student', N'demo.student@mandela.ac.za', N'229180000', NULL, GETDATE(), N'Computer Science', N'SMS');
 END
 ELSE
 BEGIN
@@ -212,8 +253,8 @@ END;
 
 IF NOT EXISTS (SELECT 1 FROM dbo.Student WHERE Name = N'Jane Doe')
 BEGIN
-    INSERT INTO dbo.Student (Name, Email, StudentNumber, Programme, EmergencyPreference)
-    VALUES (N'Jane Doe', N'jane.doe@mandela.ac.za', N'229180001', N'Information Technology', N'Email');
+    INSERT INTO dbo.Student (Name, Email, StudentNumber, PasswordHash, TermsAcceptedAt, Programme, EmergencyPreference)
+    VALUES (N'Jane Doe', N'jane.doe@mandela.ac.za', N'229180001', NULL, GETDATE(), N'Information Technology', N'Email');
 END
 ELSE
 BEGIN
@@ -222,6 +263,10 @@ BEGIN
         StudentNumber = N'229180001'
     WHERE Name = N'Jane Doe';
 END;
+
+UPDATE dbo.Student
+SET TermsAcceptedAt = COALESCE(TermsAcceptedAt, GETDATE())
+WHERE Name IN (N'Demo Student', N'Jane Doe');
 GO
 
 DECLARE @DemoStudentID INT = (SELECT TOP 1 StudentID FROM dbo.Student WHERE Name = N'Demo Student' ORDER BY StudentID);
@@ -230,15 +275,15 @@ DECLARE @JaneStudentID INT = (SELECT TOP 1 StudentID FROM dbo.Student WHERE Name
 IF @DemoStudentID IS NOT NULL
    AND NOT EXISTS (SELECT 1 FROM dbo.TrustedContact WHERE StudentID = @DemoStudentID AND Name = N'John Doe')
 BEGIN
-    INSERT INTO dbo.TrustedContact (StudentID, Name, Relationship, Phone, Email, PreferredAlertMethod)
-    VALUES (@DemoStudentID, N'John Doe', N'Friend', N'0712345678', N'john@example.com', N'SMS');
+    INSERT INTO dbo.TrustedContact (StudentID, Name, Relationship, Phone, Email, PreferredAlertMethod, ContactType)
+    VALUES (@DemoStudentID, N'John Doe', N'Friend', N'0712345678', N'john@example.com', N'SMS', N'personal');
 END;
 
 IF @JaneStudentID IS NOT NULL
    AND NOT EXISTS (SELECT 1 FROM dbo.TrustedContact WHERE StudentID = @JaneStudentID AND Name = N'Mary Smith')
 BEGIN
-    INSERT INTO dbo.TrustedContact (StudentID, Name, Relationship, Phone, Email, PreferredAlertMethod)
-    VALUES (@JaneStudentID, N'Mary Smith', N'Sister', N'0823456789', N'mary@example.com', N'Email');
+    INSERT INTO dbo.TrustedContact (StudentID, Name, Relationship, Phone, Email, PreferredAlertMethod, ContactType)
+    VALUES (@JaneStudentID, N'Mary Smith', N'Sister', N'0823456789', N'mary@example.com', N'Email', N'personal');
 END;
 GO
 
