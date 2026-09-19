@@ -48,6 +48,14 @@ Quick checks:
 Invoke-RestMethod http://localhost:3000/api/health
 ```
 
+To verify the SQL script itself, run it twice with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\verify-sql.ps1
+```
+
+Use `-Server ".\SQLEXPRESS"` or another SQL Server name if LocalDB is not available.
+
 The API exposes:
 
 - `GET /api/health`
@@ -60,11 +68,11 @@ The API exposes:
 - `POST /api/alerts/:id/status`
 - `GET /api/analytics/summary`
 
-Password note: the API stores bcrypt password hashes in `dbo.Student.PasswordHash`. It never stores plaintext passwords. Seed students in `SQLQuery1.sql` intentionally have no password hash and must use reset/change-password flow before real API sign-in.
+Password note: the API stores bcrypt password hashes in `dbo.Student.PasswordHash`. It never stores plaintext passwords. Seed students in `SQLQuery1.sql` intentionally have no password hash and must use the reset-password flow before real API sign-in. If Resend is not configured, the API returns a short-lived demo reset token so the reset screen can still be judged locally.
 
 ## Data model note
 
-`SQLQuery1.sql` is the SQL Server data model for the prototype. The signup/signin path can now use the Express API to create and read `dbo.Student` rows, record accepted terms, store password hashes, and create an official `security-patrol` trusted contact when SQL Server is reachable. Emergency notification, alert-status, password reset, and analytics endpoints exist for demo integration, but most live response workflows are still simulated by the browser UI.
+`SQLQuery1.sql` is the SQL Server data model for the prototype. The signup/signin/reset path can now use the Express API to create and read `dbo.Student` rows, record accepted terms, store password hashes, and create an official `security-patrol` trusted contact when SQL Server is reachable. The API also returns short-lived in-memory auth tokens after signup, signin, and password reset. Emergency notification, alert-status, password reset, and analytics endpoints exist for demo integration, but most live response workflows are still simulated by the browser UI.
 
 ## Security patrol assignment
 
@@ -74,9 +82,9 @@ Official patrol contact numbers and email addresses still need final operational
 
 ## Known limitations and simulated features
 
-- Authentication is now backed by SQL Server and bcrypt for the signup/signin demo slice, but there are no production sessions, MFA, account lockout policy, or full reset-password UI.
+- Authentication is now backed by SQL Server and bcrypt for the signup/signin/reset demo slice, with short-lived in-memory API tokens. There are still no production JWTs, MFA, persistent sessions, or account lockout policy.
 - SOS dispatch, trusted-contact notifications, responder acknowledgements, report submission, Safe Walk location, and analytics are still demo workflows unless the local API/email/database stack is configured and reachable.
-- Silent duress is a long-press SOS prototype path. It reuses the normal SOS notification flow and marks the alert as silent in the UI, but it is not connected to a production dispatch center.
+- Silent duress is a long-press SOS prototype path with pointer, touch, and mouse support. It reuses the normal SOS notification flow and marks the alert as silent in the UI, but it is not connected to a production dispatch center.
 - Language preference currently cycles the UI setting between English, isiXhosa, and Afrikaans; full app translation is not implemented.
 - Safe Walk location uses sample NMU campus zones with simulated movement, not live device GPS.
 - Directory and SOS phone links use `tel:` URLs; the user must tap the prepared call button before a call is placed.

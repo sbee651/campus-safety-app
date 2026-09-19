@@ -8,12 +8,14 @@ const { ipKeyGenerator } = require('express-rate-limit');
 const path = require('path');
 const { Resend } = require('resend');
 const { inspect } = require('util');
+const crypto = require('crypto');
 const { sql, getPool } = require('./db');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const passwordResetTokens = new Map();
+const sessions = new Map();
 
 app.use(cors({ origin: true }));
 app.use(express.json());
@@ -97,6 +99,7 @@ const AREA_COVERAGE = [
 const areaByName = new Map(AREA_COVERAGE.map((entry) => [entry.area.toLowerCase(), entry]));
 const isMandelaEmail = (value) => /^[^\s@]+@mandela\.ac\.za$/i.test(String(value || '').trim());
 const isNineDigitStudentNo = (value) => /^\d{9}$/.test(String(value || '').trim());
+const isStrongEnoughPassword = (value) => String(value || '').length >= 8;
 
 const authLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
@@ -127,6 +130,16 @@ const publicContactFields = (row) => row && ({
   official: row.ContactType === 'security-patrol',
   verified: true
 });
+
+const createSession = (studentId) => {
+  const token = crypto.randomBytes(32).toString('hex');
+  sessions.set(token, {
+    studentId,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 8 * 60 * 60 * 1000
+  });
+  return token;
+};
 
 const errorDetail = (error) => {
   if (!error) return 'Unknown error';
@@ -159,6 +172,7 @@ const validateAuthPayload = ({ name, email, studentNo, password }, requireName =
     else if (!isNineDigitStudentNo(studentNo)) errors.studentNo = 'Student number must be exactly 9 digits.';
   }
   if (!String(password || '').trim()) errors.password = 'Password is required.';
+  else if (requireName && !isStrongEnoughPassword(password)) errors.password = 'Use at least 8 characters.';
   return errors;
 };
 
@@ -258,6 +272,7 @@ app.post('/api/signup', authLimiter, async (req, res) => {
       ok: true,
       student: publicStudentFields(student),
       patrolContact: publicContactFields(contactResult.recordset[0]),
+      authToken: createSession(student.StudentID),
       authMode: 'sql-bcrypt'
     });
   } catch (error) {
@@ -323,6 +338,7 @@ app.post('/api/signin', authLimiter, async (req, res) => {
       ok: true,
       student: publicStudentFields(row),
       contacts: contacts.recordset.map(publicContactFields),
+      authToken: createSession(row.StudentID),
       authMode: 'sql-bcrypt'
     });
   } catch (error) {
@@ -347,17 +363,24 @@ app.post('/api/forgot-password', authLimiter, async (req, res) => {
       .query('SELECT TOP 1 StudentID, Email FROM dbo.Student WHERE LOWER(Email) = @email;');
 
     if (result.recordset.length) {
-      const token = require('crypto').randomBytes(24).toString('hex');
+      const token = crypto.randomBytes(24).toString('hex');
       passwordResetTokens.set(token, {
         studentId: result.recordset[0].StudentID,
+        email: result.recordset[0].Email,
         expiresAt: Date.now() + 15 * 60 * 1000
       });
-      const resetUrl = `${process.env.API_PUBLIC_BASE_URL || `http://localhost:${port}`}/reset-password?token=${token}`;
-      await sendEmail({
+      const resetUrl = `${process.env.API_PUBLIC_BASE_URL || `http://localhost:${port}`}/index.html?token=${token}`;
+      const delivery = await sendEmail({
         to: result.recordset[0].Email,
         subject: 'Vigil password reset',
         text: `Use this reset link within 15 minutes: ${resetUrl}`,
         html: `<p>Use this reset link within 15 minutes:</p><p><a href="${resetUrl}">${resetUrl}</a></p>`
+      });
+      return res.json({
+        ok: true,
+        message: delivery.sent ? 'If that account exists, a reset email has been queued.' : 'Email is not configured. Use the demo reset token shown below.',
+        demoResetToken: delivery.sent ? undefined : token,
+        resetUrl: delivery.sent ? undefined : resetUrl
       });
     }
 
@@ -383,6 +406,9 @@ app.post('/api/reset-password', authLimiter, async (req, res) => {
   if (!String(password || '').trim()) {
     return res.status(400).json({ ok: false, errors: { password: 'Enter a new password.' } });
   }
+  if (!isStrongEnoughPassword(password)) {
+    return res.status(400).json({ ok: false, errors: { password: 'Use at least 8 characters.' } });
+  }
 
   try {
     const passwordHash = await bcrypt.hash(String(password), 12);
@@ -392,7 +418,7 @@ app.post('/api/reset-password', authLimiter, async (req, res) => {
       .input('passwordHash', sql.NVarChar(255), passwordHash)
       .query('UPDATE dbo.Student SET PasswordHash = @passwordHash WHERE StudentID = @studentId;');
     passwordResetTokens.delete(String(token));
-    res.json({ ok: true });
+    res.json({ ok: true, authToken: createSession(record.studentId) });
   } catch (error) {
     res.status(500).json({
       ok: false,

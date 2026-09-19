@@ -681,7 +681,33 @@
             <button class="submit-btn" id="signinBtn">Sign in</button>
             <div class="auth-note" id="signinAuthNote" role="status" aria-live="polite"></div>
             <div class="auth-switch"><button type="button" id="forgotPasswordBtn">Forgot password?</button></div>
+            <div class="auth-switch"><button type="button" data-goto="reset">Have a reset token?</button></div>
             <div class="auth-switch">Don't have an account? <button type="button" data-goto="signup">Sign up</button></div>
+          </div>
+        </section>
+
+        <!-- RESET PASSWORD -->
+        <section class="screen on-navy" data-screen="reset">
+          <div class="screen-body">
+            <div class="topbar">
+              <button class="back-btn" data-goto="signin" aria-label="Back to sign in" data-icon="arrow-left"></button>
+              <h2>Reset password</h2>
+            </div>
+            <div class="subtitle">Use the token from your reset email or local demo response</div>
+
+            <div class="field">
+              <label>Reset token</label>
+              <input type="text" id="resetToken" placeholder="Paste your reset token">
+              <div class="field-error" id="resetTokenError"></div>
+            </div>
+            <div class="field">
+              <label>New password</label>
+              <input type="password" id="resetPassword" placeholder="At least 8 characters">
+              <div class="field-error" id="resetPasswordError"></div>
+            </div>
+            <button class="submit-btn" id="resetPasswordBtn">Update password</button>
+            <div class="auth-note" id="resetAuthNote" role="status" aria-live="polite"></div>
+            <div class="auth-switch">Remembered it? <button type="button" data-goto="signin">Sign in</button></div>
           </div>
         </section>
 
@@ -1260,6 +1286,59 @@
     { area: 'Adcockvale', providers: ['citywide'] },
     { area: 'Perridgevale', providers: ['citywide'] }
   ].sort((a, b) => a.area.localeCompare(b.area));
+  const I18N = {
+    English: {
+      landingTitle: 'Vigil',
+      landingBody: 'Your campus safety companion. Sign in to see your dashboard, or create an account to get started.',
+      signinTitle: 'Sign in',
+      signinSubtitle: 'Welcome back to Vigil',
+      signupTitle: 'Create account',
+      signupSubtitle: 'Set up your Vigil profile',
+      homeBadge: 'Hackathon prototype - all emergency actions are simulated',
+      sosCaption: 'TAP WHEN IN DANGER',
+      sosHint: "You're doing the right thing by reaching out. This simulates notifying campus dispatch and your trusted contacts instantly.",
+      safeWalk: 'Start Safe Walk',
+      alerts: 'Safety Alerts',
+      report: 'Report a concern',
+      directory: 'Directory',
+      contacts: 'My Contacts',
+      profileLanguage: 'Language'
+    },
+    isiXhosa: {
+      landingTitle: 'Vigil',
+      landingBody: 'Umhlobo wakho wokhuseleko ekhampasini. Ngena okanye wenze i-akhawunti ukuze uqale.',
+      signinTitle: 'Ngena',
+      signinSubtitle: 'Wamkelekile kwakhona kuVigil',
+      signupTitle: 'Yenza i-akhawunti',
+      signupSubtitle: 'Cwangcisa iprofayile yakho yeVigil',
+      homeBadge: 'Iprototype ye-hackathon - zonke izenzo zongxamiseko ziyalinganiswa',
+      sosCaption: 'COFA XA USEMNGCIPHEKWENI',
+      sosHint: 'Wenza into elungileyo ngokucela uncedo. Oku kulinganisa ukwazisa ukhuseleko lwekhampasi nabantu obathembileyo.',
+      safeWalk: 'Qala iSafe Walk',
+      alerts: 'Izilumkiso',
+      report: 'Xela ingxaki',
+      directory: 'Uluhlu loncedo',
+      contacts: 'Abantu bam',
+      profileLanguage: 'Ulwimi'
+    },
+    Afrikaans: {
+      landingTitle: 'Vigil',
+      landingBody: 'Jou kampusveiligheidsmaat. Meld aan of skep n rekening om te begin.',
+      signinTitle: 'Meld aan',
+      signinSubtitle: 'Welkom terug by Vigil',
+      signupTitle: 'Skep rekening',
+      signupSubtitle: 'Stel jou Vigil-profiel op',
+      homeBadge: 'Hackathon-prototipe - alle noodaksies word gesimuleer',
+      sosCaption: 'TIK WANNEER JY IN GEVAAR IS',
+      sosHint: 'Jy doen die regte ding deur hulp te vra. Dit simuleer kennisgewings aan kampussekuriteit en jou vertroude kontakte.',
+      safeWalk: 'Begin Safe Walk',
+      alerts: 'Veiligheidswaarskuwings',
+      report: 'Rapporteer n probleem',
+      directory: 'Gids',
+      contacts: 'My kontakte',
+      profileLanguage: 'Taal'
+    }
+  };
 
   // ============================================================
   // DOM REFS
@@ -1337,6 +1416,41 @@
     if (!note) return;
     note.textContent = message || '';
     note.classList.toggle('active', Boolean(message));
+  }
+
+  function setText(selector, value){
+    const node = document.querySelector(selector);
+    if (node && value) node.textContent = value;
+  }
+
+  function setActionLabel(selector, value){
+    const label = document.querySelector(`${selector} span:not(.action-icon)`);
+    if (!label || !value) return;
+    const small = label.querySelector('small');
+    label.childNodes.forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) node.textContent = '';
+    });
+    label.insertBefore(document.createTextNode(value), small || null);
+  }
+
+  function applyLanguage(){
+    const copy = I18N[state.settings.language] || I18N.English;
+    document.documentElement.lang = state.settings.language === 'isiXhosa' ? 'xh' : (state.settings.language === 'Afrikaans' ? 'af' : 'en');
+    setText('[data-screen="landing"] h1', copy.landingTitle);
+    setText('[data-screen="landing"] p', copy.landingBody);
+    setText('[data-screen="signin"] h2', copy.signinTitle);
+    setText('[data-screen="signin"] .subtitle', copy.signinSubtitle);
+    setText('[data-screen="signup"] h2', copy.signupTitle);
+    setText('[data-screen="signup"] .subtitle', copy.signupSubtitle);
+    setText('.prototype-badge', copy.homeBadge);
+    setText('.sos-caption', copy.sosCaption);
+    setText('.sos-hint', copy.sosHint);
+    setActionLabel('[data-goto="safewalk"]', copy.safeWalk);
+    setActionLabel('[data-goto="alerts"]', copy.alerts);
+    setActionLabel('[data-goto="report"]', copy.report);
+    setActionLabel('[data-goto="resources"]', copy.directory);
+    setActionLabel('[data-goto="guardians"]', copy.contacts);
+    setText('#languageRow strong', copy.profileLanguage);
   }
 
   async function callApi(path, payload){
@@ -1437,6 +1551,12 @@
     renderSettings();
   }
 
+  function applyAuthToken(token){
+    if (!token) return;
+    state.authToken = token;
+    saveState();
+  }
+
   function shouldUseOfflineFallback(error){
     return !error.status || error.status >= 500 || error.name === 'AbortError';
   }
@@ -1478,6 +1598,7 @@
     try {
       localStorage.setItem('vigil_state', JSON.stringify({
         user: state.user,
+        authToken: state.authToken,
         guardians: state.guardians,
         settings: state.settings,
         reports: state.reports
@@ -1491,6 +1612,7 @@
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object') return;
       if (parsed.user && typeof parsed.user === 'object') state.user = Object.assign(state.user, parsed.user);
+      if (typeof parsed.authToken === 'string') state.authToken = parsed.authToken;
       if (Array.isArray(parsed.guardians)) state.guardians = parsed.guardians;
       if (parsed.settings && typeof parsed.settings === 'object') state.settings = Object.assign(state.settings, parsed.settings);
       if (Array.isArray(parsed.reports)) state.reports = parsed.reports;
@@ -1513,7 +1635,7 @@
     closeModals();
     updateNav(name);
 
-    const hideNav = ['landing','signin','signup'].includes(name);
+    const hideNav = ['landing','signin','signup','reset'].includes(name);
     navRoot.style.display = hideNav ? 'none' : 'flex';
 
     if (name === 'safewalk') {
@@ -2007,17 +2129,25 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
     }, 900);
   }
 
-  sosBtn.addEventListener('pointerdown', () => {
+  function startDuressHold(){
     duressArmed = false;
     clearTimeout(duressTimer);
     duressTimer = setTimeout(() => {
       duressArmed = true;
       runCountdown({ silent: true });
     }, 1400);
+  }
+
+  function cancelDuressHold(){
+    clearTimeout(duressTimer);
+  }
+
+  ['pointerdown','touchstart','mousedown'].forEach(eventName => {
+    sosBtn.addEventListener(eventName, startDuressHold, { passive: true });
   });
 
-  ['pointerup','pointercancel','pointerleave'].forEach(eventName => {
-    sosBtn.addEventListener(eventName, () => clearTimeout(duressTimer));
+  ['pointerup','pointercancel','pointerleave','touchend','touchcancel','mouseup','mouseleave'].forEach(eventName => {
+    sosBtn.addEventListener(eventName, cancelDuressHold);
   });
 
   sosBtn.addEventListener('click', () => {
@@ -2308,6 +2438,7 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
   // SETTINGS
 
   function renderSettings(){
+    applyLanguage();
     document.getElementById('notifPrefsValue').textContent = state.settings.notifications ? 'On' : 'Off';
     document.getElementById('checkinValue').textContent = state.settings.checkinInterval;
     document.getElementById('locationSharingValue').textContent = state.settings.locationSharing;
@@ -2489,6 +2620,11 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
     try {
       const result = await callApi('/api/forgot-password', { email });
       setAuthNote('signinAuthNote', result.message || 'If that account exists, a reset email has been queued.');
+      if (result.demoResetToken) {
+        document.getElementById('resetToken').value = result.demoResetToken;
+        setAuthNote('resetAuthNote', 'Demo token loaded because email delivery is not configured.');
+        show('reset');
+      }
     } catch(error) {
       if (shouldUseOfflineFallback(error)) {
         setAuthNote('signinAuthNote', 'Password reset needs the API and email service. Continue with offline demo mode if needed.');
@@ -2497,6 +2633,59 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
       } else {
         setAuthNote('signinAuthNote', error.message || 'Could not request a password reset.');
       }
+    }
+  });
+
+  function validateReset(){
+    const token = document.getElementById('resetToken').value.trim();
+    const password = document.getElementById('resetPassword').value;
+    clearFieldError('resetToken');
+    clearFieldError('resetPassword');
+    let valid = true;
+    if (!token){
+      setFieldError('resetToken', 'Enter the reset token.');
+      valid = false;
+    }
+    if (!password){
+      setFieldError('resetPassword', 'Enter a new password.');
+      valid = false;
+    } else if (password.length < 8){
+      setFieldError('resetPassword', 'Use at least 8 characters.');
+      valid = false;
+    }
+    return valid;
+  }
+
+  document.getElementById('resetToken').addEventListener('blur', validateReset);
+  document.getElementById('resetPassword').addEventListener('blur', validateReset);
+
+  document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
+    if (!validateReset()) return;
+    setAuthNote('resetAuthNote', '');
+    const btn = document.getElementById('resetPasswordBtn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Updating...';
+    try {
+      const result = await callApi('/api/reset-password', {
+        token: document.getElementById('resetToken').value.trim(),
+        password: document.getElementById('resetPassword').value
+      });
+      applyAuthToken(result.authToken);
+      document.getElementById('resetPassword').value = '';
+      setAuthNote('signinAuthNote', 'Password updated. Sign in with your new password.');
+      show('signin');
+    } catch(error) {
+      if (shouldUseOfflineFallback(error)) {
+        setAuthNote('resetAuthNote', 'Password reset needs the API and database. Offline demo mode cannot update SQL passwords.');
+      } else if (error.data && error.data.errors) {
+        if (error.data.errors.password) setFieldError('resetPassword', error.data.errors.password);
+      } else {
+        setAuthNote('resetAuthNote', error.message || 'Could not reset the password.');
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
     }
   });
   
@@ -2520,6 +2709,7 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
     try {
       const result = await callApi('/api/signin', { email, password });
       applyStudentRecord(result.student, null, result.contacts);
+      applyAuthToken(result.authToken);
       show('home');
     } catch(error) {
       if (shouldUseOfflineFallback(error)) {
@@ -2558,6 +2748,7 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
     try {
       const result = await callApi('/api/signup', { name, email, studentNo, password, area, patrolProvider, termsAccepted });
       applyStudentRecord(result.student, { name, studentNo, email, area, patrolProvider }, result.contacts || (result.patrolContact ? [result.patrolContact] : []));
+      applyAuthToken(result.authToken);
       show('home');
     } catch(error) {
       if (shouldUseOfflineFallback(error)) {
@@ -2602,6 +2793,13 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
   initPatrolSignup();
   loadState();
   injectIcons(document);
+  applyLanguage();
+  const resetTokenFromUrl = new URLSearchParams(window.location.search).get('token');
+  if (resetTokenFromUrl) {
+    document.getElementById('resetToken').value = resetTokenFromUrl;
+    setAuthNote('resetAuthNote', 'Reset token loaded from the link.');
+    show('reset');
+  }
   renderGuardians();
   renderDirectory();
   renderSettings();
