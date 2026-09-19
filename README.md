@@ -32,7 +32,7 @@ npm install
 npm start
 ```
 
-The API runs on `http://localhost:3000` by default. `index.html` calls that hardcoded localhost URL for the hackathon demo.
+The API runs on `http://localhost:3000` by default. `index.html` calls that hardcoded localhost URL for the hackathon demo. When the page is hosted over HTTPS, browser mixed-content rules can block calls to this local HTTP API. For the connected demo path, open `index.html` directly or serve it locally over HTTP.
 
 Configure `server/.env` as needed:
 
@@ -46,9 +46,10 @@ Quick checks:
 
 ```powershell
 Invoke-RestMethod http://localhost:3000/api/health
+powershell -ExecutionPolicy Bypass -File scripts\test-api-contract.ps1
 ```
 
-To verify the SQL script itself, run it twice with:
+`GET /api/health` is intentionally a fast API liveness check and does not require SQL Server. Use signup/signin, analytics, or the SQL verification script to confirm database access. To verify the SQL script itself, run it twice with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\verify-sql.ps1
@@ -68,7 +69,7 @@ The API exposes:
 - `POST /api/alerts/:id/status`
 - `GET /api/analytics/summary`
 
-Password note: the API stores bcrypt password hashes in `dbo.Student.PasswordHash`. It never stores plaintext passwords. Seed students in `SQLQuery1.sql` intentionally have no password hash and must use the reset-password flow before real API sign-in. If Resend is not configured, the API returns a short-lived demo reset token so the reset screen can still be judged locally.
+Password note: the API stores bcrypt password hashes in `dbo.Student.PasswordHash`. It never stores plaintext passwords. Seed students in `SQLQuery1.sql` intentionally have no password hash and must use the reset-password flow before real API sign-in. If Resend is not configured and `DEMO_MODE=true`, the API returns a short-lived demo reset token so the reset screen can still be judged locally.
 
 ## Data model note
 

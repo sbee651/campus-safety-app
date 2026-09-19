@@ -1409,7 +1409,15 @@
     return /^\d{9}$/.test(value);
   }
 
+  // NOTE FOR DEMO DAY: this must be reachable from the browser tab you open.
+  // If you serve this file over https (e.g. the public GitHub Pages link),
+  // browsers block calls from an https page to an http:// API (mixed content).
+  // During the live demo, open this file locally (double-click it, or serve
+  // it with a plain http:// static server) rather than the https Pages URL,
+  // so it can actually reach http://localhost:3000.
   const API_BASE_URL = 'http://localhost:3000';
+  const API_HEALTH_PATH = '/api/health';
+  const API_RECHECK_MS = 5000;
 
   function setAuthNote(id, message){
     const note = document.getElementById(id);
@@ -1453,7 +1461,58 @@
     setText('#languageRow strong', copy.profileLanguage);
   }
 
+  // ============================================================
+  // API AVAILABILITY (avoids a 3s hang on every sign-in/sign-up
+  // attempt when the local Node/SQL server isn't running — we
+  // probe once, cache the result briefly, and re-probe quickly
+  // in the background so starting the server mid-demo self-heals)
+  // ============================================================
+  let apiAvailable = null;   // null = unknown, true/false = last known state
+  let apiCheckedAt = 0;
+  let apiCheckInFlight = null;
+
+  async function probeApiOnce(timeoutMs){
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      // Any HTTP response (even a 404) means the server is reachable.
+      // Only a network error or timeout means it truly isn't.
+      await fetch(`${API_BASE_URL}${API_HEALTH_PATH}`, { signal: controller.signal });
+      return true;
+    } catch (e) {
+      return false;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function ensureApiAvailability(){
+    const now = Date.now();
+    // Known good recently — skip the probe, go straight to the real call.
+    if (apiAvailable === true && (now - apiCheckedAt) < API_RECHECK_MS) return;
+    // Known bad recently — fail fast instead of waiting on a dead server.
+    if (apiAvailable === false && (now - apiCheckedAt) < API_RECHECK_MS){
+      const err = new Error('API unavailable (cached).');
+      throw err;
+    }
+    // Stale or unknown — probe quickly (short timeout, not the full 3s).
+    if (!apiCheckInFlight){
+      apiCheckInFlight = probeApiOnce(900).then(ok => {
+        apiAvailable = ok;
+        apiCheckedAt = Date.now();
+        apiCheckInFlight = null;
+        return ok;
+      });
+    }
+    const ok = await apiCheckInFlight;
+    if (!ok){
+      const err = new Error('API unavailable.');
+      throw err;
+    }
+  }
+
   async function callApi(path, payload){
+    await ensureApiAvailability();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3000);
     try {
@@ -1482,6 +1541,7 @@
   }
 
   async function getApi(path){
+    await ensureApiAvailability();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3000);
     try {
@@ -1949,8 +2009,12 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
     state.currentWalk = {
       zoneId,
       startedAt: new Date().toISOString(),
-      status: 'active'
+      status: 'active',
+      notified: false
     };
+    const zone = getZone(zoneId);
+    notifyEmergency('safe-walk-start', `Safe Walk started near ${zone.name} (simulated)`);
+    state.currentWalk.notified = true;
 
     state.locationWatcher = startSimulatedLocation(zoneId, ({ lat, lng, acc, zone }) => {
       status.textContent = `Simulated - ${zone.name} - accuracy ${acc}m`;

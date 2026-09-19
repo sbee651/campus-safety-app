@@ -16,10 +16,27 @@ const port = Number(process.env.PORT || 3000);
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const passwordResetTokens = new Map();
 const sessions = new Map();
+const demoMode = ['1', 'true', 'yes', 'on'].includes(String(process.env.DEMO_MODE || '').toLowerCase());
 
-app.use(cors({ origin: true }));
+const corsOptions = {
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
+app.options('/api/*', cors(corsOptions));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', '..')));
+
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+  console.log(`[api] -> ${req.method} ${req.originalUrl}`);
+  res.on('finish', () => {
+    console.log(`[api] <- ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - startedAt}ms`);
+  });
+  next();
+});
 
 const PATROL_CONTACTS = {
   atlas: {
@@ -191,21 +208,8 @@ async function sendEmail({ to, subject, html, text }) {
   return { sent: true, id: response.data?.id || response.id || null };
 }
 
-app.get('/api/health', async (req, res) => {
-  try {
-    const pool = await getPool();
-    const result = await pool.request().query('SELECT DB_NAME() AS databaseName, 1 AS ok');
-    res.json({
-      ok: true,
-      database: result.recordset[0].databaseName
-    });
-  } catch (error) {
-    res.status(503).json({
-      ok: false,
-      error: 'Database connection failed.',
-      detail: errorDetail(error)
-    });
-  }
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
 
 app.get('/api/patrol-coverage', (req, res) => {
@@ -228,13 +232,39 @@ app.post('/api/signup', authLimiter, async (req, res) => {
   else if (!patrol) errors.patrolProvider = 'Choose a patrol provider that covers your selected area.';
 
   if (Object.keys(errors).length) {
-    return res.status(400).json({ ok: false, errors });
+    return res.status(422).json({ ok: false, errors });
   }
 
   let transaction;
 
   try {
-    transaction = new sql.Transaction(await getPool());
+    const pool = await getPool();
+    const duplicateResult = await pool.request()
+      .input('email', sql.NVarChar(100), String(email).trim().toLowerCase())
+      .input('studentNo', sql.Char(9), String(studentNo).trim())
+      .query(`
+        SELECT Email, StudentNumber
+        FROM dbo.Student
+        WHERE LOWER(Email) = @email OR StudentNumber = @studentNo;
+      `);
+    if (duplicateResult.recordset.length) {
+      const duplicateErrors = {};
+      duplicateResult.recordset.forEach((row) => {
+        if (String(row.Email || '').toLowerCase() === String(email).trim().toLowerCase()) {
+          duplicateErrors.email = 'A student with that email already exists.';
+        }
+        if (String(row.StudentNumber || '').trim() === String(studentNo).trim()) {
+          duplicateErrors.studentNo = 'A student with that student number already exists.';
+        }
+      });
+      return res.status(409).json({
+        ok: false,
+        error: 'A student with that email or student number already exists.',
+        errors: duplicateErrors
+      });
+    }
+
+    transaction = new sql.Transaction(pool);
     const passwordHash = await bcrypt.hash(String(password), 12);
     await transaction.begin();
 
@@ -271,7 +301,7 @@ app.post('/api/signup', authLimiter, async (req, res) => {
     res.status(201).json({
       ok: true,
       student: publicStudentFields(student),
-      patrolContact: publicContactFields(contactResult.recordset[0]),
+      contacts: [publicContactFields(contactResult.recordset[0])],
       authToken: createSession(student.StudentID),
       authMode: 'sql-bcrypt'
     });
@@ -282,7 +312,11 @@ app.post('/api/signup', authLimiter, async (req, res) => {
     if (error.number === 2627 || error.number === 2601) {
       return res.status(409).json({
         ok: false,
-        error: 'A student with that email or student number already exists.'
+        error: 'A student with that email or student number already exists.',
+        errors: {
+          email: 'That email may already exist.',
+          studentNo: 'That student number may already exist.'
+        }
       });
     }
     res.status(500).json({
@@ -297,7 +331,7 @@ app.post('/api/signin', authLimiter, async (req, res) => {
   const { email, password } = req.body || {};
   const errors = validateAuthPayload({ email, password }, false, false);
   if (Object.keys(errors).length) {
-    return res.status(400).json({ ok: false, errors });
+    return res.status(422).json({ ok: false, errors });
   }
 
   try {
@@ -353,7 +387,7 @@ app.post('/api/signin', authLimiter, async (req, res) => {
 app.post('/api/forgot-password', authLimiter, async (req, res) => {
   const { email } = req.body || {};
   if (!isMandelaEmail(email)) {
-    return res.status(400).json({ ok: false, errors: { email: 'Use an @mandela.ac.za email address.' } });
+    return res.status(422).json({ ok: false, errors: { email: 'Use an @mandela.ac.za email address.' } });
   }
 
   try {
@@ -378,9 +412,9 @@ app.post('/api/forgot-password', authLimiter, async (req, res) => {
       });
       return res.json({
         ok: true,
-        message: delivery.sent ? 'If that account exists, a reset email has been queued.' : 'Email is not configured. Use the demo reset token shown below.',
-        demoResetToken: delivery.sent ? undefined : token,
-        resetUrl: delivery.sent ? undefined : resetUrl
+        message: 'If that account exists, a reset email has been queued.',
+        demoResetToken: (!delivery.sent && demoMode) ? token : undefined,
+        resetUrl: (!delivery.sent && demoMode) ? resetUrl : undefined
       });
     }
 
@@ -404,10 +438,10 @@ app.post('/api/reset-password', authLimiter, async (req, res) => {
     return res.status(400).json({ ok: false, error: 'Reset token is invalid or expired.' });
   }
   if (!String(password || '').trim()) {
-    return res.status(400).json({ ok: false, errors: { password: 'Enter a new password.' } });
+    return res.status(422).json({ ok: false, errors: { password: 'Enter a new password.' } });
   }
   if (!isStrongEnoughPassword(password)) {
-    return res.status(400).json({ ok: false, errors: { password: 'Use at least 8 characters.' } });
+    return res.status(422).json({ ok: false, errors: { password: 'Use at least 8 characters.' } });
   }
 
   try {
@@ -433,17 +467,35 @@ app.post('/api/notify-emergency', async (req, res) => {
   const uniqueRecipients = Array.from(new Set((Array.isArray(recipients) ? recipients : [])
     .map((value) => String(value || '').trim())
     .filter(Boolean)));
-  if (!uniqueRecipients.length && !process.env.CAMPUS_SECURITY_EMAIL) {
-    return res.json({ ok: true, sent: false, message: 'No configured email recipients; notification simulated.' });
+  if (!uniqueRecipients.length) {
+    return res.json({ ok: true, sent: false, message: 'No recipients supplied; notification simulated.' });
   }
 
   try {
-    const targets = uniqueRecipients.length ? uniqueRecipients : [process.env.CAMPUS_SECURITY_EMAIL];
+    const type = String(emergencyType || 'sos');
+    const alertCopy = {
+      'safe-walk-start': {
+        subject: `Vigil Safe Walk started: ${studentName || 'student'}`,
+        text: `${studentName || 'A student'} (${studentNo || 'unknown'}) has started a Safe Walk. Location/route: ${location || 'not provided'}. This is an FYI monitoring notification, not an SOS alert.`,
+        html: `<p><strong>Safe Walk started</strong></p><p>${studentName || 'A student'} (${studentNo || 'unknown'}) has started a Safe Walk.</p><p>Location/route: ${location || 'not provided'}.</p><p>This is an FYI monitoring notification, not an SOS alert.</p>`
+      },
+      'silent-duress': {
+        subject: `Vigil silent duress alert: ${studentName || 'student'}`,
+        text: `Silent duress alert for ${studentName || 'student'} (${studentNo || 'unknown'}). Location: ${location || 'not provided'}. Treat as urgent and discreet.`,
+        html: `<p><strong>Silent duress alert</strong></p><p>Student: ${studentName || 'student'} (${studentNo || 'unknown'})</p><p>Location: ${location || 'not provided'}</p><p>Treat as urgent and discreet.</p>`
+      },
+      sos: {
+        subject: `Vigil emergency alert: ${studentName || 'student'}`,
+        text: `Emergency alert for ${studentName || 'student'} (${studentNo || 'unknown'}). Location: ${location || 'not provided'}.`,
+        html: `<p><strong>Emergency alert</strong></p><p>Student: ${studentName || 'student'} (${studentNo || 'unknown'})</p><p>Location: ${location || 'not provided'}</p>`
+      }
+    };
+    const copy = alertCopy[type] || alertCopy.sos;
     const delivery = await sendEmail({
-      to: targets,
-      subject: `Vigil emergency alert: ${emergencyType || 'SOS'}`,
-      text: `Emergency alert for ${studentName || 'student'} (${studentNo || 'unknown'}). Location: ${location || 'not provided'}.`,
-      html: `<p><strong>Emergency alert:</strong> ${emergencyType || 'SOS'}</p><p>Student: ${studentName || 'student'} (${studentNo || 'unknown'})</p><p>Location: ${location || 'not provided'}</p>`
+      to: uniqueRecipients,
+      subject: copy.subject,
+      text: copy.text,
+      html: copy.html
     });
     res.json({ ok: true, ...delivery });
   } catch (error) {
@@ -495,7 +547,16 @@ app.get('/api/analytics/summary', async (req, res) => {
          FROM dbo.EmergencyAlert
          WHERE TriggeredAt IS NOT NULL AND AcknowledgedAt IS NOT NULL) AS avgAckSeconds;
     `);
-    res.json({ ok: true, summary: result.recordset[0] });
+    const summary = result.recordset[0] || {};
+    res.json({
+      ok: true,
+      summary: {
+        totalAlerts: Number(summary.totalAlerts) || 0,
+        totalReports: Number(summary.totalReports) || 0,
+        officialPatrolContacts: Number(summary.officialPatrolContacts) || 0,
+        avgAckSeconds: Number(summary.avgAckSeconds) || 0
+      }
+    });
   } catch (error) {
     res.status(500).json({
       ok: false,

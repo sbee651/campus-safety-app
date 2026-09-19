@@ -11,14 +11,28 @@ if (-not (Get-Command sqlcmd -ErrorAction SilentlyContinue)) {
   throw "sqlcmd is not installed or is not on PATH."
 }
 
+function Invoke-SqlcmdChecked {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string[]]$Arguments,
+    [Parameter(Mandatory = $true)]
+    [string]$Step
+  )
+
+  & sqlcmd @Arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "$Step failed with sqlcmd exit code $LASTEXITCODE."
+  }
+}
+
 Write-Host "Running SQLQuery1.sql against $Server ..."
-sqlcmd -S $Server -E -i $scriptPath -b
+Invoke-SqlcmdChecked -Step "Fresh SQL run" -Arguments @("-S", $Server, "-E", "-C", "-i", $scriptPath, "-b")
 
 Write-Host "Running SQLQuery1.sql a second time to verify idempotency ..."
-sqlcmd -S $Server -E -i $scriptPath -b
+Invoke-SqlcmdChecked -Step "Second SQL run" -Arguments @("-S", $Server, "-E", "-C", "-i", $scriptPath, "-b")
 
 Write-Host "Checking required columns and seed data ..."
-sqlcmd -S $Server -E -d $Database -b -Q @"
+Invoke-SqlcmdChecked -Step "Schema/seed check" -Arguments @("-S", $Server, "-E", "-C", "-d", $Database, "-b", "-Q", @"
 SELECT
   COL_LENGTH(N'dbo.Student', N'Email') AS StudentEmailColumn,
   COL_LENGTH(N'dbo.Student', N'StudentNumber') AS StudentNumberColumn,
@@ -31,6 +45,6 @@ SELECT StudentID, Name, Email, StudentNumber, TermsAcceptedAt
 FROM dbo.Student
 WHERE Email IN (N'demo.student@mandela.ac.za', N'jane.doe@mandela.ac.za')
 ORDER BY StudentID;
-"@
+"@)
 
 Write-Host "SQL verification completed."
