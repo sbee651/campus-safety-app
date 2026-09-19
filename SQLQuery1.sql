@@ -21,9 +21,80 @@ BEGIN
     CREATE TABLE dbo.Student (
         StudentID INT PRIMARY KEY IDENTITY(1,1),
         Name NVARCHAR(100),
+        Email NVARCHAR(100),
+        StudentNumber CHAR(9),
         Programme NVARCHAR(100),
-        EmergencyPreference NVARCHAR(50)
+        EmergencyPreference NVARCHAR(50),
+        CONSTRAINT CK_Student_Email_Mandela CHECK (Email IS NULL OR LOWER(Email) LIKE N'%@mandela.ac.za'),
+        CONSTRAINT CK_Student_StudentNumber_NineDigits CHECK (StudentNumber IS NULL OR StudentNumber LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'),
+        CONSTRAINT UQ_Student_Email UNIQUE (Email),
+        CONSTRAINT UQ_Student_StudentNumber UNIQUE (StudentNumber)
     );
+END;
+GO
+
+IF COL_LENGTH(N'dbo.Student', N'Email') IS NULL
+BEGIN
+    ALTER TABLE dbo.Student ADD Email NVARCHAR(100) NULL;
+END;
+
+IF COL_LENGTH(N'dbo.Student', N'StudentNumber') IS NULL
+BEGIN
+    ALTER TABLE dbo.Student ADD StudentNumber CHAR(9) NULL;
+END;
+GO
+
+UPDATE dbo.Student
+SET
+    Email = COALESCE(Email, LOWER(CONCAT(N'student', StudentID, N'@mandela.ac.za'))),
+    StudentNumber = COALESCE(StudentNumber, RIGHT(CONCAT(N'000000000', 200000000 + StudentID), 9));
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.check_constraints
+    WHERE name = N'CK_Student_Email_Mandela'
+      AND parent_object_id = OBJECT_ID(N'dbo.Student')
+)
+BEGIN
+    ALTER TABLE dbo.Student
+    ADD CONSTRAINT CK_Student_Email_Mandela
+    CHECK (Email IS NULL OR LOWER(Email) LIKE N'%@mandela.ac.za');
+END;
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.check_constraints
+    WHERE name = N'CK_Student_StudentNumber_NineDigits'
+      AND parent_object_id = OBJECT_ID(N'dbo.Student')
+)
+BEGIN
+    ALTER TABLE dbo.Student
+    ADD CONSTRAINT CK_Student_StudentNumber_NineDigits
+    CHECK (StudentNumber IS NULL OR StudentNumber LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]');
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.key_constraints
+    WHERE name = N'UQ_Student_Email'
+      AND parent_object_id = OBJECT_ID(N'dbo.Student')
+)
+BEGIN
+    ALTER TABLE dbo.Student
+    ADD CONSTRAINT UQ_Student_Email UNIQUE (Email);
+END;
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.key_constraints
+    WHERE name = N'UQ_Student_StudentNumber'
+      AND parent_object_id = OBJECT_ID(N'dbo.Student')
+)
+BEGIN
+    ALTER TABLE dbo.Student
+    ADD CONSTRAINT UQ_Student_StudentNumber UNIQUE (StudentNumber);
 END;
 GO
 
@@ -32,6 +103,7 @@ BEGIN
     CREATE TABLE dbo.TrustedContact (
         ContactID INT PRIMARY KEY IDENTITY(1,1),
         StudentID INT FOREIGN KEY REFERENCES dbo.Student(StudentID),
+        
         Name NVARCHAR(100),
         Relationship NVARCHAR(50),
         Phone NVARCHAR(20),
@@ -127,14 +199,28 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM dbo.Student WHERE Name = N'Demo Student')
 BEGIN
-    INSERT INTO dbo.Student (Name, Programme, EmergencyPreference)
-    VALUES (N'Demo Student', N'Computer Science', N'SMS');
+    INSERT INTO dbo.Student (Name, Email, StudentNumber, Programme, EmergencyPreference)
+    VALUES (N'Demo Student', N'demo.student@mandela.ac.za', N'229180000', N'Computer Science', N'SMS');
+END;
+ELSE
+BEGIN
+    UPDATE dbo.Student
+    SET Email = N'demo.student@mandela.ac.za',
+        StudentNumber = N'229180000'
+    WHERE Name = N'Demo Student';
 END;
 
 IF NOT EXISTS (SELECT 1 FROM dbo.Student WHERE Name = N'Jane Doe')
 BEGIN
-    INSERT INTO dbo.Student (Name, Programme, EmergencyPreference)
-    VALUES (N'Jane Doe', N'Information Technology', N'Email');
+    INSERT INTO dbo.Student (Name, Email, StudentNumber, Programme, EmergencyPreference)
+    VALUES (N'Jane Doe', N'jane.doe@mandela.ac.za', N'229180001', N'Information Technology', N'Email');
+END;
+ELSE
+BEGIN
+    UPDATE dbo.Student
+    SET Email = N'jane.doe@mandela.ac.za',
+        StudentNumber = N'229180001'
+    WHERE Name = N'Jane Doe';
 END;
 GO
 
