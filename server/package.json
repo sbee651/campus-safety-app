@@ -1,0 +1,24 @@
+{
+  "name": "guardian-campus-safety-api",
+  "version": "1.0.0",
+  "description": "Thin SQL Server API for the Guardian hackathon prototype",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js"
+  },
+  "keywords": [
+    "guardian",
+    "campus-safety",
+    "sql-server"
+  ],
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "msnodesqlv8": "^5.5.0",
+    "mssql": "^11.0.1"
+  }
+}

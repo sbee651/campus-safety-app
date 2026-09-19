@@ -166,6 +166,12 @@
     font-family:var(--font-body);
   }
   .role-toggle button.active{background:var(--yellow);color:var(--yellow-ink);border-color:var(--yellow);}
+  .auth-note{
+    display:none;margin-top:12px;padding:10px 12px;border-radius:12px;
+    background:rgba(244,222,78,.14);color:var(--yellow);
+    font-size:11.5px;font-weight:700;line-height:1.45;
+  }
+  .auth-note.active{display:block;}
 
   /* ALERTS */
   .alert-card{
@@ -653,6 +659,7 @@
               <div class="field-error" id="signinPasswordError"></div>
             </div>
             <button class="submit-btn" id="signinBtn">Sign in</button>
+            <div class="auth-note" id="signinAuthNote" role="status" aria-live="polite"></div>
             <div class="auth-switch">Don't have an account? <button type="button" data-goto="signup">Sign up</button></div>
           </div>
         </section>
@@ -687,6 +694,7 @@
               <div class="field-error" id="signupPasswordError"></div>
             </div>
             <button class="submit-btn" id="signupBtn">Create account</button>
+            <div class="auth-note" id="signupAuthNote" role="status" aria-live="polite"></div>
             <div class="auth-switch">Already have an account? <button type="button" data-goto="signin">Sign in</button></div>
           </div>
         </section>
@@ -1179,6 +1187,56 @@
 
   function isNineDigitStudentNo(value){
     return /^\d{9}$/.test(value);
+  }
+
+  const API_BASE_URL = 'http://localhost:3000';
+
+  function setAuthNote(id, message){
+    const note = document.getElementById(id);
+    if (!note) return;
+    note.textContent = message || '';
+    note.classList.toggle('active', Boolean(message));
+  }
+
+  async function callApi(path, payload){
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    try {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      let data = {};
+      try {
+        data = await response.json();
+      } catch(e) {
+        data = {};
+      }
+      if (!response.ok) {
+        const error = new Error(data.error || 'API request failed.');
+        error.status = response.status;
+        error.data = data;
+        throw error;
+      }
+      return data;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function applyStudentRecord(student, fallback){
+    if (student && student.name) state.user.name = student.name;
+    if (student && student.studentNo) state.user.studentNo = student.studentNo;
+    if (student && student.email) state.user.email = student.email;
+    if (fallback && fallback.name) state.user.name = fallback.name;
+    if (fallback && fallback.studentNo) state.user.studentNo = fallback.studentNo;
+    renderSettings();
+  }
+
+  function shouldUseOfflineFallback(error){
+    return !error.status || error.status >= 500 || error.name === 'AbortError';
   }
   
   function pad(n){ return String(n).padStart(2,'0'); }
@@ -1981,23 +2039,81 @@
   document.getElementById('signupStudentNo').addEventListener('blur', validateSignup);
   document.getElementById('signupPassword').addEventListener('blur', validateSignup);
   
-  document.getElementById('signinBtn').addEventListener('click', () => {
+  document.getElementById('signinBtn').addEventListener('click', async () => {
     if (!validateSignin()) return;
+    setAuthNote('signinAuthNote', '');
+    const btn = document.getElementById('signinBtn');
+    const originalText = btn.textContent;
+    const email = document.getElementById('signinEmail').value.trim();
+    const password = document.getElementById('signinPassword').value.trim();
+    btn.disabled = true;
+    btn.textContent = 'Signing in...';
     if (signinRole === 'security'){
+      btn.disabled = false;
+      btn.textContent = originalText;
       show('dashboard');
-    } else {
+      return;
+    }
+
+    try {
+      const result = await callApi('/api/signin', { email, password });
+      applyStudentRecord(result.student);
       show('home');
+    } catch(error) {
+      if (shouldUseOfflineFallback(error)) {
+        setAuthNote('signinAuthNote', 'API or database unavailable. Continuing in offline demo mode with local browser state.');
+        applyStudentRecord(null, { name: state.user.name, studentNo: state.user.studentNo });
+        show('home');
+      } else if (error.status === 404) {
+        setFieldError('signinEmail', 'No SQL student record was found for this email.');
+      } else if (error.data && error.data.errors) {
+        if (error.data.errors.email) setFieldError('signinEmail', error.data.errors.email);
+        if (error.data.errors.password) setFieldError('signinPassword', error.data.errors.password);
+      } else {
+        setAuthNote('signinAuthNote', error.message || 'Could not sign in through the API.');
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
     }
   });
 
-  document.getElementById('signupBtn').addEventListener('click', () => {
+  document.getElementById('signupBtn').addEventListener('click', async () => {
     const name = document.getElementById('signupName').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
     const studentNo = document.getElementById('signupStudentNo').value.trim();
+    const password = document.getElementById('signupPassword').value.trim();
     if (!validateSignup()) return;
-    state.user.name = name;
-    state.user.studentNo = studentNo;
-    renderSettings();
-    show('home');
+    setAuthNote('signupAuthNote', '');
+    const btn = document.getElementById('signupBtn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Creating account...';
+
+    try {
+      const result = await callApi('/api/signup', { name, email, studentNo, password });
+      applyStudentRecord(result.student, { name, studentNo });
+      show('home');
+    } catch(error) {
+      if (shouldUseOfflineFallback(error)) {
+        setAuthNote('signupAuthNote', 'API or database unavailable. Account is running in offline demo mode and was not saved to SQL Server.');
+        applyStudentRecord(null, { name, studentNo, email });
+        show('home');
+      } else if (error.status === 409) {
+        setFieldError('signupEmail', 'That email or student number already exists in SQL Server.');
+        setFieldError('signupStudentNo', 'Use a unique 9 digit student number.');
+      } else if (error.data && error.data.errors) {
+        if (error.data.errors.name) setFieldError('signupName', error.data.errors.name);
+        if (error.data.errors.email) setFieldError('signupEmail', error.data.errors.email);
+        if (error.data.errors.studentNo) setFieldError('signupStudentNo', error.data.errors.studentNo);
+        if (error.data.errors.password) setFieldError('signupPassword', error.data.errors.password);
+      } else {
+        setAuthNote('signupAuthNote', error.message || 'Could not create the account through the API.');
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
   });
 
   const logoutBtn = document.getElementById('logoutBtn');
