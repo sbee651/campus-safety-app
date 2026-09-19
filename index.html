@@ -2,11 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Guardian — NMU Campus Safety Prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Guardian - NMU Campus Safety Prototype</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23101a4d'/%3E%3Cpath d='M32 10l18 7v13c0 13-8 21-18 25-10-4-18-12-18-25V17l18-7z' fill='%23f4de4e'/%3E%3Cpath d='M32 20v18M23 29h18' stroke='%23101a4d' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root{
     --navy:#101a4d;
@@ -27,19 +32,6 @@
     --font-display:'Sora', system-ui, sans-serif;
     --font-body:'Manrope', system-ui, sans-serif;
   }
-
-  :root:not([data-theme="light"]){
-    --scrim: rgba(0,0,0,.35);
-  }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      --paper:#0e1330;
-    }
-  }
-  :root[data-theme="dark"]{
-    --paper:#0e1330;
-  }
-
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
@@ -56,7 +48,6 @@
     padding:40px 16px;
     overflow-x:hidden;
   }
-
   .stage{
     width:100%;
     max-width:1060px;
@@ -66,654 +57,541 @@
     justify-content:center;
     flex-wrap:wrap;
   }
-
-  .intro{
-    flex:1 1 300px;
-    max-width:380px;
-    color:var(--white);
-  }
+  .intro{flex:1 1 300px;max-width:380px;color:var(--white);}
   .intro .eyebrow{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    font-family:var(--font-body);
-    font-weight:700;
-    font-size:12.5px;
-    letter-spacing:.02em;
-    background:rgba(244,222,78,.14);
-    color:var(--yellow);
-    padding:6px 12px;
-    border-radius:999px;
-    margin-bottom:18px;
+    display:inline-flex;align-items:center;gap:8px;
+    font-weight:700;font-size:12.5px;letter-spacing:.02em;
+    background:rgba(244,222,78,.14);color:var(--yellow);
+    padding:6px 12px;border-radius:999px;margin-bottom:18px;
   }
   .intro h1{
-    font-family:var(--font-display);
-    font-weight:800;
-    font-size:clamp(30px,4vw,40px);
-    line-height:1.08;
-    margin:0 0 14px;
-    letter-spacing:-0.01em;
+    font-family:var(--font-display);font-weight:800;
+    font-size:clamp(30px,4vw,40px);line-height:1.08;
+    margin:0 0 14px;letter-spacing:-0.01em;
   }
-  .intro p{
-    font-size:15.5px;
-    line-height:1.6;
-    color:#c4cae8;
-    margin:0 0 26px;
-    max-width:34ch;
-  }
-  .intro .taplist{
-    list-style:none;
-    margin:0;
-    padding:0;
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-  }
-  .intro .taplist li{
-    display:flex;
-    gap:12px;
-    align-items:flex-start;
-    font-size:13.5px;
-    color:#aab1de;
-    line-height:1.5;
-  }
-  .intro .taplist b{
-    color:var(--white);
-    font-weight:600;
-  }
-  .dot{
-    flex:none;
-    width:6px;height:6px;border-radius:50%;
-    background:var(--yellow);
-    margin-top:7px;
-  }
+  .intro p{font-size:15.5px;line-height:1.6;color:#c4cae8;margin:0 0 26px;max-width:34ch;}
+  .intro .taplist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;}
+  .intro .taplist li{display:flex;gap:12px;align-items:flex-start;font-size:13.5px;color:#aab1de;line-height:1.5;}
+  .intro .taplist b{color:var(--white);font-weight:600;}
+  .dot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--yellow);margin-top:7px;}
 
-  /* PHONE FRAME */
-  .phone-wrap{
-    position:relative;
-    flex:none;
-  }
+  .phone-wrap{position:relative;flex:none;display:flex;flex-direction:column;align-items:center;}
   .phone{
-    width:340px;
-    height:700px;
-    background:#050814;
-    border-radius:48px;
-    padding:14px;
-    box-shadow:
-      0 40px 80px -20px rgba(0,0,0,.65),
-      0 0 0 2px rgba(255,255,255,.05) inset;
+    width:340px;height:700px;background:#050814;border-radius:48px;padding:14px;
+    box-shadow:0 40px 80px -20px rgba(0,0,0,.65),0 0 0 2px rgba(255,255,255,.05) inset;
     position:relative;
   }
   .notch{
-    position:absolute;
-    top:14px; left:50%;
-    transform:translateX(-50%);
-    width:120px; height:26px;
-    background:#050814;
-    border-radius:0 0 18px 18px;
-    z-index:30;
+    position:absolute;top:14px;left:50%;transform:translateX(-50%);
+    width:120px;height:26px;background:#050814;border-radius:0 0 18px 18px;z-index:30;
   }
   .notch::after{
-    content:'';
-    position:absolute; top:9px; left:50%;
-    transform:translateX(-50%);
-    width:8px; height:8px; border-radius:50%;
-    background:#1c2140;
+    content:'';position:absolute;top:9px;left:50%;transform:translateX(-50%);
+    width:8px;height:8px;border-radius:50%;background:#1c2140;
   }
   .screen-viewport{
-    position:relative;
-    width:100%; height:100%;
-    background:var(--navy);
-    border-radius:36px;
-    overflow:hidden;
+    position:relative;width:100%;height:100%;background:var(--navy);
+    border-radius:36px;overflow:hidden;
   }
-
   .screen{
-    position:absolute; inset:0;
-    display:flex; flex-direction:column;
-    opacity:0; pointer-events:none;
-    transform:translateY(14px);
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    opacity:0;pointer-events:none;transform:translateY(14px);
     transition:opacity .28s ease, transform .28s ease;
   }
-  .screen.active{
-    opacity:1; pointer-events:auto; transform:translateY(0);
-    z-index:5;
-  }
-  .screen.overlay{ z-index:20; }
-
+  .screen.active{opacity:1;pointer-events:auto;transform:translateY(0);z-index:5;}
+  .screen.overlay{z-index:20;}
+  .screen.overlay:not(.active){z-index:0;}
   .screen-body{
-    flex:1;
-    overflow-y:auto;
-    padding:52px 20px 18px;
-    -ms-overflow-style:none;
-    scrollbar-width:none;
+    flex:1;overflow-y:auto;padding:52px 20px 18px;
+    -ms-overflow-style:none;scrollbar-width:none;
   }
-  .screen-body::-webkit-scrollbar{ display:none; }
+  .screen-body::-webkit-scrollbar{display:none;}
+  .on-paper .screen-body{background:var(--paper);color:var(--ink);}
+  .on-navy .screen-body{background:var(--navy);color:var(--white);}
+  .on-white .screen-body{background:var(--white);color:var(--ink);}
 
-  .on-paper .screen-body{ background:var(--paper); color:var(--ink); }
-  .on-navy .screen-body{ background:var(--navy); color:var(--white); }
-  .on-white .screen-body{ background:var(--white); color:var(--ink); }
-
-  /* TOPBAR */
-  .topbar{
-    display:flex; align-items:center; gap:12px;
-    padding:2px 2px 16px;
-  }
-  .topbar h2{
-    font-family:var(--font-display);
-    font-weight:700;
-    font-size:21px;
-    margin:0;
-    letter-spacing:-0.01em;
-  }
+  .topbar{display:flex;align-items:center;gap:12px;padding:2px 2px 16px;}
+  .topbar h2{font-family:var(--font-display);font-weight:700;font-size:21px;margin:0;letter-spacing:-0.01em;}
   .back-btn{
-    width:38px;height:38px;border-radius:12px;
-    background:rgba(255,255,255,.12);
-    border:none;
-    display:flex;align-items:center;justify-content:center;
-    color:var(--white);
-    cursor:pointer;
-    flex:none;
+    width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.12);
+    border:none;display:flex;align-items:center;justify-content:center;
+    color:var(--white);cursor:pointer;flex:none;
   }
-  .on-paper .back-btn, .on-white .back-btn{
-    background:rgba(16,26,77,.06);
-    color:var(--ink);
-  }
-  .back-btn:hover{ filter:brightness(1.1); }
-  .subtitle{
-    font-size:12.5px;
-    color:var(--muted);
-    margin:-10px 0 18px;
-  }
-  .on-paper .subtitle, .on-white .subtitle{ color:#6b7094; }
+  .back-btn svg{width:20px;height:20px;}
+  .on-paper .back-btn,.on-white .back-btn{background:rgba(16,26,77,.06);color:var(--ink);}
+  .back-btn:hover{filter:brightness(1.1);}
+  .subtitle{font-size:12.5px;color:var(--muted);margin:-10px 0 18px;}
+  .on-paper .subtitle,.on-white .subtitle{color:#6b7094;}
 
-  /* HOME */
+  /* LANDING & AUTH */
+  .landing-body{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:40px 28px;
+  }
+  .landing-mark{
+    width:72px;height:72px;border-radius:22px;background:var(--yellow);
+    display:flex;align-items:center;justify-content:center;font-size:32px;
+    margin-bottom:22px;box-shadow:0 10px 24px -10px rgba(0,0,0,.4);
+  }
+  .landing-body h1{
+    font-family:var(--font-display);font-weight:800;font-size:26px;
+    color:var(--white);margin:0 0 10px;letter-spacing:-0.01em;
+  }
+  .landing-body p{font-size:13px;line-height:1.55;color:var(--muted);margin:0 0 34px;max-width:26ch;}
+  .landing-actions{display:flex;flex-direction:column;gap:12px;width:100%;}
+  .landing-btn-primary{
+    width:100%;background:var(--yellow);color:var(--yellow-ink);border:none;
+    border-radius:var(--radius-md);padding:15px;font-weight:800;font-size:14.5px;
+    font-family:var(--font-body);cursor:pointer;
+  }
+  .landing-btn-secondary{
+    width:100%;background:rgba(255,255,255,.08);color:var(--white);border:none;
+    border-radius:var(--radius-md);padding:15px;font-weight:700;font-size:14.5px;
+    font-family:var(--font-body);cursor:pointer;
+  }
+  .auth-switch{margin-top:22px;font-size:12.5px;color:var(--muted);}
+  .auth-switch button{
+    background:none;border:none;color:var(--yellow);font-weight:700;
+    font-size:12.5px;cursor:pointer;padding:0;font-family:var(--font-body);
+  }
+  .prototype-badge{
+    background:rgba(244,222,78,.14);color:var(--yellow);
+    font-size:10.5px;font-weight:700;letter-spacing:.01em;
+    padding:8px 12px;border-radius:10px;margin-bottom:16px;line-height:1.4;
+  }
+  .role-toggle{display:flex;gap:8px;margin-bottom:22px;width:100%;}
+  .role-toggle button{
+    flex:1;padding:11px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,.16);
+    background:none;color:var(--muted);font-weight:700;font-size:12.5px;cursor:pointer;
+    font-family:var(--font-body);
+  }
+  .role-toggle button.active{background:var(--yellow);color:var(--yellow-ink);border-color:var(--yellow);}
+
+  /* ALERTS */
+  .alert-card{
+    display:flex;flex-direction:column;gap:6px;background:rgba(255,255,255,.06);
+    border-left:4px solid var(--muted);border-radius:var(--radius-md);
+    padding:14px 15px;margin-bottom:10px;
+  }
+  .alert-card.info{border-left-color:#7ba8ff;}
+  .alert-card.caution{border-left-color:var(--yellow);}
+  .alert-card.urgent{border-left-color:var(--coral);}
+  .alert-level{
+    display:inline-flex;align-self:flex-start;font-size:10px;font-weight:800;
+    letter-spacing:.05em;padding:3px 9px;border-radius:999px;text-transform:uppercase;
+  }
+  .alert-card.info .alert-level{background:rgba(123,168,255,.18);color:#7ba8ff;}
+  .alert-card.caution .alert-level{background:rgba(244,222,78,.18);color:var(--yellow);}
+  .alert-card.urgent .alert-level{background:rgba(239,95,117,.18);color:var(--coral);}
+  .alert-card strong{font-size:13.5px;color:var(--white);}
+  .alert-card .alert-meta{font-size:11px;color:var(--muted);}
+  .alert-card .alert-msg{font-size:12px;color:#c7cbee;line-height:1.5;}
+
+  /* RESPONDER DASHBOARD */
+  .responder-row{
+    background:rgba(255,255,255,.06);border-radius:var(--radius-md);
+    padding:14px 15px;margin-bottom:10px;
+  }
+  .responder-row-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
+  .responder-row strong{font-size:13.5px;}
+  .responder-meta{font-size:11.5px;color:var(--muted);line-height:1.6;}
+  .status-chip{
+    font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+    padding:4px 10px;border-radius:999px;border:none;cursor:pointer;font-family:var(--font-body);
+  }
+  .status-chip.status-new{background:var(--coral-soft);color:#a11d34;}
+  .status-chip.status-acknowledged{background:rgba(244,222,78,.2);color:#8a7a1a;}
+  .status-chip.status-dispatched{background:rgba(123,168,255,.2);color:#3a5fa8;}
+  .status-chip.status-resolved,.status-chip.status-falsealarm{background:var(--mint-soft);color:#1c6b34;}
+
+  /* PRIVACY NOTICE */
+  .privacy-section{margin-bottom:18px;}
+  .privacy-section h3{font-size:13.5px;margin:0 0 6px;color:var(--white);}
+  .privacy-section p{font-size:12.5px;line-height:1.6;color:#c7cbee;margin:0;}
+
   .status-pill{
-    display:flex; align-items:center; gap:12px;
-    background:rgba(255,255,255,.08);
-    border-radius:16px;
-    padding:12px 14px;
-    margin-bottom:22px;
+    display:flex;align-items:center;gap:12px;
+    background:rgba(255,255,255,.08);border-radius:16px;padding:12px 14px;margin-bottom:22px;
   }
   .status-dot{
-    width:10px;height:10px;border-radius:50%;
-    background:var(--mint);
-    box-shadow:0 0 0 4px rgba(123,216,143,.18);
+    width:10px;height:10px;border-radius:50%;background:var(--mint);
     flex:none;
   }
-  .status-pill strong{ display:block; font-size:13.5px; }
-  .status-pill span{ display:block; font-size:11.5px; color:var(--muted); margin-top:1px; }
+  .status-pill strong{display:block;font-size:13.5px;}
+  .status-pill span{display:block;font-size:11.5px;color:var(--muted);margin-top:1px;}
 
-  .sos-zone{
-    text-align:center;
-    margin:6px 0 22px;
-  }
-  .sos-caption{
-    font-size:11.5px;
-    font-weight:700;
-    letter-spacing:.06em;
-    color:var(--muted);
-    margin-bottom:16px;
-  }
+  .sos-zone{text-align:center;margin:6px 0 22px;}
+  .sos-caption{font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--muted);margin-bottom:16px;}
   .sos-btn{
-    width:172px;height:172px;
-    border-radius:50%;
-    border:none;
+    width:172px;height:172px;border-radius:50%;border:none;
     background:radial-gradient(circle at 32% 28%, #ff8095, var(--coral) 62%);
-    color:var(--white);
-    font-family:var(--font-display);
-    font-weight:800;
-    font-size:26px;
-    letter-spacing:.02em;
-    cursor:pointer;
-    box-shadow:0 0 0 10px rgba(239,95,117,.16), 0 18px 40px -14px rgba(239,95,117,.75);
-    position:relative;
-    transition:transform .12s ease;
+    color:var(--white);font-family:var(--font-display);font-weight:800;
+    font-size:26px;letter-spacing:.02em;cursor:pointer;
+    box-shadow:0 12px 22px -12px rgba(0,0,0,.55);
+    position:relative;transition:transform .12s ease;
   }
-  .sos-btn:active{ transform:scale(.96); }
-  .sos-hint{
-    font-size:12px;
-    color:var(--muted);
-    margin-top:16px;
-    line-height:1.5;
-    max-width:220px;
-    margin-inline:auto;
-  }
+  .sos-btn:active{transform:scale(.96);}
+  .sos-hint{font-size:12px;color:var(--muted);margin-top:16px;line-height:1.5;max-width:220px;margin-inline:auto;}
 
-  .action-list{
-    display:flex; flex-direction:column; gap:10px;
-    margin-top:4px;
-  }
+  .action-list{display:flex;flex-direction:column;gap:10px;margin-top:4px;}
   .action-btn{
-    display:flex; align-items:center; gap:13px;
-    background:var(--yellow);
-    color:var(--yellow-ink);
-    border:none;
-    border-radius:var(--radius-md);
-    padding:15px 16px;
-    font-family:var(--font-body);
-    font-weight:700;
-    font-size:14.5px;
-    text-align:left;
-    cursor:pointer;
-    width:100%;
+    display:flex;align-items:center;gap:13px;background:var(--yellow);
+    color:var(--yellow-ink);border:none;border-radius:var(--radius-md);
+    padding:15px 16px;font-family:var(--font-body);font-weight:700;
+    font-size:14.5px;text-align:left;cursor:pointer;width:100%;
   }
-  .action-btn small{
-    display:block;
-    font-weight:500;
-    font-size:11.5px;
-    color:#5c5730;
-    margin-top:2px;
-  }
+  .action-btn small{display:block;font-weight:500;font-size:11.5px;color:#5c5730;margin-top:2px;}
   .action-icon{
-    flex:none;
-    width:36px;height:36px;
-    border-radius:10px;
-    background:rgba(16,26,77,.08);
-    display:flex;align-items:center;justify-content:center;
+    flex:none;width:36px;height:36px;border-radius:10px;
+    background:rgba(16,26,77,.08);display:flex;align-items:center;justify-content:center;
   }
-  .action-btn:hover{ filter:brightness(1.03); }
+  .action-icon svg,.sheet-icon svg,.res-icon svg,.check-badge svg,.info-card svg,.btn-solid svg,.btn-mint svg,.btn-coral-outline svg,.submit-btn svg,.landing-mark svg{
+    width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  }
+  .action-btn:hover{filter:brightness(1.03);}
 
-  /* BOTTOM NAV */
   .bottom-nav{
-    flex:none;
-    display:flex;
-    background:var(--paper);
-    border-top:1px solid rgba(16,26,77,.08);
-    padding:10px 6px 14px;
+    flex:none;display:flex;background:var(--paper);
+    border-top:1px solid rgba(16,26,77,.08);padding:10px 6px 14px;
   }
-  .on-navy + .bottom-nav, .navshell .on-navy ~ .bottom-nav{}
   .nav-item{
-    flex:1;
-    display:flex; flex-direction:column; align-items:center; gap:4px;
-    background:none; border:none;
-    color:#9aa0c4;
-    font-family:var(--font-body);
-    font-size:10.5px;
-    font-weight:600;
-    cursor:pointer;
-    padding:4px 0;
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+    background:none;border:none;color:#9aa0c4;font-family:var(--font-body);
+    font-size:10.5px;font-weight:600;cursor:pointer;padding:4px 0;
   }
-  .nav-item svg{ width:20px; height:20px; }
-  .nav-item.active{ color:var(--navy); }
-  .nav-item.active svg{ stroke:var(--coral); }
-  .nav-item.more.active{ color:var(--coral); }
+  .nav-item svg{width:20px;height:20px;}
+  .nav-item.active{color:var(--navy);}
+  .nav-item.active svg{stroke:var(--coral);}
+  .nav-item.more.active{color:var(--coral);}
 
-  /* COUNTDOWN / SOS ACTIVE */
   .center-col{
-    flex:1;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    text-align:center;
-    padding:40px 26px;
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;padding:40px 26px;
   }
   .badge-emergency{
-    background:var(--coral-soft);
-    color:#a11d34;
-    font-weight:800;
-    font-size:12px;
-    letter-spacing:.03em;
-    padding:9px 20px;
-    border-radius:999px;
-    margin-bottom:16px;
+    background:var(--coral-soft);color:#a11d34;font-weight:800;
+    font-size:12px;letter-spacing:.03em;padding:9px 20px;
+    border-radius:999px;margin-bottom:16px;
   }
   .status-line{
-    font-weight:700;
-    font-size:13px;
-    letter-spacing:.02em;
-    color:#c7cbee;
-    margin-bottom:26px;
+    font-weight:700;font-size:13px;letter-spacing:.02em;
+    color:#c7cbee;margin-bottom:26px;
   }
   .count-ring{
-    width:176px;height:176px;
-    border-radius:50%;
-    background:var(--yellow);
-    display:flex; align-items:center; justify-content:center;
-    font-family:var(--font-display);
-    font-weight:800;
-    font-size:76px;
-    color:var(--navy);
-    margin-bottom:26px;
-    position:relative;
+    width:176px;height:176px;border-radius:50%;background:var(--yellow);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:800;font-size:76px;
+    color:var(--navy);margin-bottom:26px;position:relative;
   }
   .count-ring::after{
-    content:'';
-    position:absolute; bottom:44px; left:50%; transform:translateX(-50%);
-    width:56px; height:6px; border-radius:4px; background:var(--navy);
+    content:'';position:absolute;bottom:44px;left:50%;transform:translateX(-50%);
+    width:56px;height:6px;border-radius:4px;background:var(--navy);
   }
-  .live-line{
-    font-size:12.5px;
-    color:#c7cbee;
-    margin-bottom:20px;
-  }
+  .live-line{font-size:12.5px;color:#c7cbee;margin-bottom:20px;}
   .info-card{
-    display:flex; align-items:center; gap:12px;
-    background:var(--yellow);
-    color:var(--yellow-ink);
-    border-radius:var(--radius-md);
-    padding:14px 16px;
-    font-size:12.5px;
-    font-weight:700;
-    text-align:left;
-    line-height:1.4;
-    width:100%;
-    margin-bottom:10px;
+    display:flex;align-items:center;gap:12px;background:var(--yellow);
+    color:var(--yellow-ink);border-radius:var(--radius-md);padding:14px 16px;
+    font-size:12.5px;font-weight:700;text-align:left;line-height:1.4;
+    width:100%;margin-bottom:10px;
   }
-  .full-actions{ width:100%; display:flex; flex-direction:column; gap:10px; margin-top:2px; }
+  .full-actions{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:2px;}
   .btn-solid{
-    display:flex; align-items:center; justify-content:center; gap:10px;
-    background:var(--yellow); color:var(--yellow-ink);
-    border:none; border-radius:var(--radius-md);
-    padding:14px; font-weight:700; font-size:14px;
-    cursor:pointer; width:100%;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    background:var(--yellow);color:var(--yellow-ink);border:none;
+    border-radius:var(--radius-md);padding:14px;font-weight:700;
+    font-size:14px;cursor:pointer;width:100%;
   }
   .btn-link{
-    background:none; border:none;
-    color:var(--white); text-decoration:underline;
-    font-weight:700; font-size:13.5px; cursor:pointer;
-    margin-top:18px;
+    background:none;border:none;color:var(--white);text-decoration:underline;
+    font-weight:700;font-size:13.5px;cursor:pointer;margin-top:18px;
   }
 
-  /* SAFE WALK */
   .map-card{
-    border-radius:var(--radius-md);
-    overflow:hidden;
-    height:170px;
-    margin-bottom:18px;
-    position:relative;
-    background:
-      linear-gradient(135deg, #e7ebf5 0%, #d9e0f2 100%);
+    border-radius:var(--radius-md);overflow:hidden;height:220px;
+    margin-bottom:18px;position:relative;background:#e7ebf5;
   }
-  .map-grid{
-    position:absolute; inset:0;
-    background-image:
-      linear-gradient(rgba(16,26,77,.08) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(16,26,77,.08) 1px, transparent 1px);
-    background-size:26px 26px;
+  #liveMap{width:100%;height:100%;z-index:1;}
+  .location-status{
+    position:absolute;top:12px;left:12px;z-index:1000;
+    background:rgba(0,0,0,0.78);color:white;padding:8px 12px;
+    border-radius:10px;font-size:12px;font-weight:600;backdrop-filter:blur(8px);
   }
-  .map-route{
-    position:absolute; inset:0;
-  }
-  .map-pin{
-    position:absolute; top:38%; left:52%;
-    width:26px;height:26px;
-    background:var(--coral);
-    border-radius:50% 50% 50% 0;
-    transform:rotate(-45deg) translate(-50%,-50%);
-    box-shadow:0 6px 14px -4px rgba(0,0,0,.35);
-  }
-  .map-pin::after{
-    content:''; position:absolute; top:5px;left:5px;
-    width:10px;height:10px;border-radius:50%;background:#fff;
-  }
-  .map-walker{
-    position:absolute; bottom:22%; left:22%;
-    width:14px;height:14px;border-radius:50%;
-    background:var(--navy);
-    box-shadow:0 0 0 5px rgba(16,26,77,.18);
-    animation:pulse 1.8s infinite;
-  }
-  @keyframes pulse{
-    0%,100%{ box-shadow:0 0 0 5px rgba(16,26,77,.18); }
-    50%{ box-shadow:0 0 0 9px rgba(16,26,77,.08); }
-  }
-  .stat-row{
-    display:flex; gap:12px; margin-bottom:18px;
-  }
-  .stat-box{
-    flex:1;
-    background:rgba(255,255,255,.06);
-    border-radius:var(--radius-md);
-    padding:14px;
-  }
-  .stat-box span{
-    display:block; font-size:11px; font-weight:700; letter-spacing:.03em;
-    color:var(--muted); margin-bottom:6px;
-  }
-  .stat-box strong{
-    font-family:var(--font-display);
-    font-size:24px;
-  }
+  .stat-row{display:flex;gap:12px;margin-bottom:18px;}
+  .stat-box{flex:1;background:rgba(255,255,255,.06);border-radius:var(--radius-md);padding:14px;}
+  .stat-box span{display:block;font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--muted);margin-bottom:6px;}
+  .stat-box strong{font-family:var(--font-display);font-size:24px;}
   .stream-row{
-    display:flex; align-items:center; justify-content:space-between;
-    background:var(--mint-soft);
-    color:#1c6b34;
-    border-radius:var(--radius-md);
-    padding:13px 15px;
-    font-weight:700;
-    font-size:13px;
-    margin-bottom:16px;
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--mint-soft);color:#1c6b34;border-radius:var(--radius-md);
+    padding:13px 15px;font-weight:700;font-size:13px;margin-bottom:16px;
   }
   .live-tag{
-    background:var(--mint);
-    color:#0d3c1c;
-    font-size:10.5px;
-    font-weight:800;
-    padding:4px 10px;
-    border-radius:999px;
-    letter-spacing:.04em;
+    background:var(--mint);color:#0d3c1c;font-size:10.5px;
+    font-weight:800;padding:4px 10px;border-radius:999px;letter-spacing:.04em;
   }
   .btn-mint{
-    background:var(--mint-soft); color:#1c6b34;
-    border:none; border-radius:var(--radius-md);
-    padding:14px; font-weight:700; font-size:14px;
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    cursor:pointer; width:100%; margin-bottom:10px;
+    background:var(--mint-soft);color:#1c6b34;border:none;border-radius:var(--radius-md);
+    padding:14px;font-weight:700;font-size:14px;display:flex;
+    align-items:center;justify-content:center;gap:8px;cursor:pointer;
+    width:100%;margin-bottom:10px;
   }
   .btn-coral-outline{
-    background:var(--coral-soft); color:#a11d34;
-    border:none; border-radius:var(--radius-md);
-    padding:14px; font-weight:700; font-size:14px;
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    cursor:pointer; width:100%;
+    background:var(--coral-soft);color:#a11d34;border:none;border-radius:var(--radius-md);
+    padding:14px;font-weight:700;font-size:14px;display:flex;
+    align-items:center;justify-content:center;gap:8px;cursor:pointer;width:100%;
   }
 
-  /* GUARDIANS */
   .guardian-row{
-    display:flex; align-items:center; gap:14px;
-    background:var(--yellow);
-    border-radius:var(--radius-md);
-    padding:14px 16px;
-    margin-bottom:10px;
+    display:flex;align-items:center;gap:14px;background:var(--yellow);
+    border-radius:var(--radius-md);padding:14px 16px;margin-bottom:10px;
+    position:relative;
   }
+  .guardian-row .remove-btn{
+    position:absolute;right:12px;top:12px;background:rgba(0,0,0,.12);
+    border:none;width:24px;height:24px;border-radius:50%;cursor:pointer;
+    font-size:14px;color:#7a4a0f;display:flex;align-items:center;justify-content:center;
+  }
+  .guardian-row .remove-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;}
   .avatar-circ{
-    width:42px;height:42px;border-radius:50%;
-    background:#ffcf7a;
+    width:42px;height:42px;border-radius:50%;background:#ffcf7a;
     display:flex;align-items:center;justify-content:center;
-    font-weight:800; font-family:var(--font-display);
-    color:#7a4a0f;
-    flex:none;
+    font-weight:800;font-family:var(--font-display);color:#7a4a0f;flex:none;
   }
-  .guardian-row strong{ font-size:14.5px; color:var(--yellow-ink); }
-  .guardian-row .tag{
-    display:block; font-size:11px; color:#5c5730; margin-top:1px; font-weight:600;
-  }
+  .guardian-row strong{font-size:14.5px;color:var(--yellow-ink);}
+  .guardian-row .tag{display:block;font-size:11px;color:#5c5730;margin-top:1px;font-weight:600;}
+  .verified-badge{color:#1c6b34;font-size:10.5px;font-weight:800;margin-left:6px;}
   .add-row{
-    display:flex; align-items:center; gap:14px;
-    border:2px dashed rgba(255,255,255,.18);
-    border-radius:var(--radius-md);
-    padding:14px 16px;
-    color:var(--yellow);
-    font-weight:700; font-size:14px;
-    background:none; width:100%; cursor:pointer;
-    margin-bottom:18px;
+    display:flex;align-items:center;gap:14px;border:2px dashed rgba(255,255,255,.18);
+    border-radius:var(--radius-md);padding:14px 16px;color:var(--yellow);
+    font-weight:700;font-size:14px;background:none;width:100%;
+    cursor:pointer;margin-bottom:18px;
   }
   .plus-circ{
-    width:36px;height:36px;border-radius:50%;
-    background:rgba(244,222,78,.14);
-    display:flex;align-items:center;justify-content:center;
-    color:var(--yellow); font-size:18px; font-weight:800;
-    flex:none;
+    width:36px;height:36px;border-radius:50%;background:rgba(244,222,78,.14);
+    display:flex;align-items:center;justify-content:center;color:var(--yellow);
+    font-size:18px;font-weight:800;flex:none;
   }
   .note-card{
-    display:flex; gap:12px;
-    background:rgba(255,255,255,.06);
-    border-radius:var(--radius-md);
-    padding:14px;
-    font-size:12px;
-    line-height:1.55;
-    color:#c7cbee;
+    display:flex;gap:12px;background:rgba(255,255,255,.06);
+    border-radius:var(--radius-md);padding:14px;font-size:12px;
+    line-height:1.55;color:#c7cbee;
   }
 
-  /* FORM (REPORT) */
-  .field{ margin-bottom:16px; }
-  .field label{
-    display:block; font-weight:700; font-size:13px; margin-bottom:8px;
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-weight:700;font-size:13px;margin-bottom:8px;}
+  .field input,.field textarea,.field select{
+    width:100%;background:var(--yellow);border:none;border-radius:var(--radius-sm);
+    padding:13px 14px;font-family:var(--font-body);font-size:12.5px;
+    font-weight:600;color:#5c5730;resize:none;
   }
-  .field input, .field textarea{
-    width:100%;
-    background:var(--yellow);
-    border:none; border-radius:var(--radius-sm);
-    padding:13px 14px;
-    font-family:var(--font-body);
-    font-size:12.5px; font-weight:600;
-    color:#5c5730;
-    resize:none;
+  .field textarea{min-height:76px;}
+  .field input::placeholder,.field textarea::placeholder{color:#8a8450;}
+  .field input:focus,.field textarea:focus,.field select:focus{
+    outline:2px solid var(--coral);outline-offset:2px;
   }
-  .field textarea{ min-height:76px; }
-  .field input::placeholder, .field textarea::placeholder{ color:#8a8450; }
-  .field input:focus, .field textarea:focus{ outline:2px solid var(--coral); outline-offset:2px; }
+  .field.has-error input,.field.has-error textarea,.field.has-error select{
+    border:2px solid var(--coral);background:#fff2f4;color:#7d1628;
+  }
+  .field-error{
+    display:block;min-height:16px;margin-top:7px;color:#ffd3da;
+    font-size:11.5px;font-weight:700;line-height:1.35;visibility:hidden;
+  }
+  .on-white .field-error,.modal .field-error{color:#a11d34;}
+  .field.has-error .field-error{visibility:visible;}
+  .checkbox-row{
+    display:flex;align-items:center;gap:10px;margin-bottom:16px;
+    font-size:13px;font-weight:600;color:var(--white);
+  }
+  .checkbox-row input{width:auto;}
   .submit-btn{
-    display:flex; align-items:center; justify-content:center; gap:9px;
-    width:100%;
-    background:var(--yellow); color:#1c6b34;
-    border:none; border-radius:var(--radius-md);
-    padding:15px; font-weight:800; font-size:14.5px;
-    cursor:pointer;
-    margin-top:10px;
+    display:flex;align-items:center;justify-content:center;gap:9px;
+    width:100%;background:var(--yellow);color:#1c6b34;border:none;
+    border-radius:var(--radius-md);padding:15px;font-weight:800;
+    font-size:14.5px;cursor:pointer;margin-top:10px;
   }
 
-  /* SUBMITTED */
   .toast-pill{
-    display:flex; align-items:center; gap:12px;
-    background:var(--navy);
-    color:var(--white);
-    border-radius:999px;
-    padding:16px 24px;
-    font-weight:800;
-    font-size:16px;
-    margin-bottom:22px;
+    display:flex;align-items:center;gap:12px;background:var(--navy);
+    color:var(--white);border-radius:999px;padding:16px 24px;
+    font-weight:800;font-size:16px;margin-bottom:22px;
   }
+  .app-toast{
+    position:absolute;left:18px;right:18px;bottom:82px;z-index:80;
+    background:#101a4d;color:#fff;border:1px solid rgba(244,222,78,.35);
+    border-radius:14px;padding:12px 14px;font-size:12.5px;font-weight:800;
+    box-shadow:0 18px 34px -18px rgba(0,0,0,.75);
+    opacity:0;transform:translateY(10px);pointer-events:none;
+    transition:opacity .18s ease, transform .18s ease;
+  }
+  .app-toast.active{opacity:1;transform:translateY(0);}
   .check-badge{
-    width:24px;height:24px;border-radius:50%;
-    background:var(--mint);
-    display:flex; align-items:center; justify-content:center;
-    flex:none;
+    width:24px;height:24px;border-radius:50%;background:var(--mint);
+    display:flex;align-items:center;justify-content:center;flex:none;
   }
   .ok-btn{
-    background:none; border:none;
-    font-family:var(--font-display);
-    font-weight:800; font-size:20px;
-    text-decoration:underline;
-    color:var(--ink); cursor:pointer;
+    background:none;border:none;font-family:var(--font-display);
+    font-weight:800;font-size:20px;text-decoration:underline;
+    color:var(--ink);cursor:pointer;
   }
+  .report-id{
+    font-family:var(--font-display);font-size:22px;font-weight:800;
+    color:var(--ink);margin:8px 0 4px;
+  }
+  .report-meta{font-size:12.5px;color:#6b7094;margin-bottom:24px;}
 
-  /* RESOURCES */
   .search-box{
-    display:flex; align-items:center; gap:10px;
-    background:rgba(255,255,255,.08);
-    border-radius:999px;
-    padding:11px 16px;
-    margin-bottom:16px;
-    color:var(--muted);
-    font-size:12.5px;
+    display:flex;align-items:center;gap:10px;
+    background:rgba(255,255,255,.08);border-radius:999px;
+    padding:11px 16px;margin-bottom:16px;color:var(--muted);font-size:12.5px;
   }
+  .search-box input{
+    background:none;border:none;color:var(--white);font-family:var(--font-body);
+    font-size:12.5px;width:100%;outline:none;
+  }
+  .search-box input::placeholder{color:var(--muted);}
   .res-row{
-    display:flex; align-items:center; gap:13px;
-    background:var(--white);
-    border-radius:var(--radius-md);
-    padding:13px 15px;
-    margin-bottom:10px;
-    cursor:pointer;
+    display:flex;align-items:center;gap:13px;background:var(--white);
+    border-radius:var(--radius-md);padding:13px 15px;margin-bottom:10px;
+    cursor:pointer;text-decoration:none;color:inherit;
   }
+  .res-row:hover{filter:brightness(.97);}
   .res-icon{
-    width:38px;height:38px;border-radius:10px;
-    background:var(--paper);
-    display:flex;align-items:center;justify-content:center;
-    flex:none;
+    width:38px;height:38px;border-radius:10px;background:var(--paper);
+    display:flex;align-items:center;justify-content:center;flex:none;
   }
-  .res-row strong{ display:block; font-size:13.5px; }
-  .res-row span{ display:block; font-size:11px; color:#6b7094; margin-top:2px; }
+  .res-row strong{display:block;font-size:13.5px;}
+  .res-row span{display:block;font-size:11px;color:#6b7094;margin-top:2px;}
 
-  /* PROFILE */
   .profile-card{
-    display:flex; align-items:center; gap:14px;
-    background:rgba(255,255,255,.06);
-    border-radius:var(--radius-md);
-    padding:15px 16px;
-    margin-bottom:22px;
+    display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.06);
+    border-radius:var(--radius-md);padding:15px 16px;margin-bottom:22px;
   }
-  .profile-card strong{ display:block; font-size:14.5px; }
-  .profile-card span{ display:block; font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .profile-card strong{display:block;font-size:14.5px;}
+  .profile-card span{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;}
   .section-label{
-    font-size:11.5px; font-weight:800; letter-spacing:.05em;
-    color:var(--muted); margin-bottom:12px;
+    font-size:11.5px;font-weight:800;letter-spacing:.05em;
+    color:var(--muted);margin-bottom:12px;
   }
   .setting-row{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    background:rgba(255,255,255,.06);
-    border-radius:var(--radius-md);
-    padding:14px 15px;
-    margin-bottom:10px;
-    cursor:pointer;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:rgba(255,255,255,.06);border-radius:var(--radius-md);
+    padding:14px 15px;margin-bottom:10px;cursor:pointer;
   }
-  .setting-row strong{ display:block; font-size:13.5px; }
-  .setting-row span{ display:block; font-size:11px; color:var(--muted); margin-top:2px; }
+  .setting-row:hover{background:rgba(255,255,255,.1);}
+  .setting-row strong{display:block;font-size:13.5px;}
+  .setting-row span{display:block;font-size:11px;color:var(--muted);margin-top:2px;}
+  .setting-value{color:var(--yellow);font-weight:700;font-size:12.5px;}
 
-  /* MORE SHEET */
   .sheet-backdrop{
-    position:absolute; inset:0;
-    background:rgba(5,8,20,.5);
-    opacity:0; pointer-events:none;
-    transition:opacity .22s ease;
-    z-index:15;
+    position:absolute;inset:0;background:rgba(5,8,20,.5);
+    opacity:0;pointer-events:none;transition:opacity .22s ease;z-index:15;
   }
-  .sheet-backdrop.active{ opacity:1; pointer-events:auto; }
+  .sheet-backdrop.active{opacity:1;pointer-events:auto;}
   .sheet{
-    position:absolute; left:0; right:0; bottom:0;
-    background:var(--navy);
-    border-radius:24px 24px 0 0;
-    padding:10px 18px 22px;
-    transform:translateY(100%);
-    transition:transform .28s ease;
-    z-index:16;
+    position:absolute;left:0;right:0;bottom:0;background:var(--navy);
+    border-radius:24px 24px 0 0;padding:10px 18px 22px;
+    transform:translateY(100%);transition:transform .28s ease;z-index:16;
+    max-height:70%;overflow-y:auto;
   }
-  .sheet.active{ transform:translateY(0); }
+  .sheet.active{transform:translateY(0);}
   .sheet-handle{
-    width:36px;height:4px;border-radius:3px;
-    background:rgba(255,255,255,.2);
+    width:36px;height:4px;border-radius:3px;background:rgba(255,255,255,.2);
     margin:8px auto 16px;
   }
-  .sheet h3{
-    color:var(--white); font-family:var(--font-display);
-    font-size:17px; margin:0 0 14px;
-  }
-  .sheet-item{
-    display:flex; align-items:center; gap:13px;
-    background:rgba(255,255,255,.06);
-    border-radius:var(--radius-md);
-    padding:14px 15px;
-    margin-bottom:9px;
-    color:var(--white);
-    font-weight:700; font-size:13.5px;
-    border:none; width:100%; text-align:left;
-    cursor:pointer;
-  }
-  .sheet-icon{
-    width:36px;height:36px;border-radius:10px;
-    background:rgba(244,222,78,.14);
+  .sheet h3{color:var(--white);font-family:var(--font-display);font-size:17px;margin:0 0 14px;}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
+  .sheet-head h3{margin:0;}
+  .sheet-close{
+    width:36px;height:36px;border-radius:12px;border:none;cursor:pointer;
+    background:rgba(255,255,255,.08);color:var(--white);
     display:flex;align-items:center;justify-content:center;
-    flex:none;
   }
+  .sheet-close svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;}
+  .sheet-item{
+    display:flex;align-items:center;gap:13px;background:rgba(255,255,255,.06);
+    border-radius:var(--radius-md);padding:14px 15px;margin-bottom:9px;
+    color:var(--white);font-weight:700;font-size:13.5px;border:none;
+    width:100%;text-align:left;cursor:pointer;
+  }
+  .sheet-item:hover{background:rgba(255,255,255,.1);}
+  .sheet-icon{
+    width:36px;height:36px;border-radius:10px;background:rgba(244,222,78,.14);
+    display:flex;align-items:center;justify-content:center;flex:none;
+  }
+
+  .modal-overlay{
+    position:absolute;inset:0;background:rgba(5,8,20,.7);
+    display:none;align-items:center;justify-content:center;
+    z-index:50;padding:20px;
+  }
+  .modal-overlay.active{display:flex;}
+  .modal-overlay:not(.active){pointer-events:none;}
+  .modal{
+    background:var(--white);border-radius:var(--radius-lg);
+    padding:24px;width:100%;max-width:300px;
+  }
+  .modal h3{
+    font-family:var(--font-display);font-size:18px;margin:0 0 16px;
+    color:var(--ink);
+  }
+  .modal .field label{color:var(--ink);}
+  .modal-actions{display:flex;gap:10px;margin-top:20px;}
+  .modal-actions button{
+    flex:1;padding:12px;border:none;border-radius:var(--radius-sm);
+    font-weight:700;font-size:13.5px;cursor:pointer;font-family:var(--font-body);
+  }
+  .btn-primary{background:var(--navy);color:var(--white);}
+  .btn-secondary{background:var(--paper);color:var(--ink);}
+
+  .sos-status-list{
+    display:flex;flex-direction:column;gap:8px;
+    background:rgba(0,0,0,.15);border-radius:var(--radius-md);
+    padding:14px;margin-bottom:16px;width:100%;
+  }
+  .sos-status-item{
+    display:flex;align-items:center;gap:10px;
+    font-size:12.5px;color:#c7cbee;text-align:left;
+  }
+  .sos-status-item .dot-status{
+    width:8px;height:8px;border-radius:50%;flex:none;
+    background:var(--mint);
+  }
+  .sos-status-item .dot-status.pending{background:var(--yellow);}
+  .sos-status-item .dot-status.sent{background:var(--mint);}
 
   @media (prefers-reduced-motion: reduce){
-    .screen, .sheet, .sheet-backdrop, .map-walker{ transition:none; animation:none; }
+    .screen,.sheet,.sheet-backdrop{transition:none;}
   }
-
   @media (max-width:760px){
-    .stage{ flex-direction:column-reverse; gap:30px; }
-    .intro{ text-align:center; max-width:400px; }
-    .intro .taplist{ align-items:flex-start; text-align:left; }
-    .phone{ width:min(340px, 92vw); }
+    .stage{flex-direction:column-reverse;gap:30px;}
+    .intro{text-align:center;max-width:400px;}
+    .intro .taplist{align-items:flex-start;text-align:left;}
+    .phone{width:min(340px, 92vw);}
+  }
+  /* Full-screen app mode on phones - no decorative frame, fills the viewport */
+  @media (max-width:520px){
+    body{padding:0;align-items:stretch;}
+    .stage{gap:0;min-height:100vh;min-height:100dvh;}
+    .intro{display:none;}
+    .phone-wrap{width:100%;}
+    .phone{
+      width:100%;max-width:100%;
+      height:100vh;height:100dvh;
+      border-radius:0;padding:0;box-shadow:none;
+    }
+    .notch{display:none;}
+    .screen-viewport{border-radius:0;}
+    .screen-body{padding:calc(env(safe-area-inset-top,0px) + 22px) 18px 18px;}
+    #bottomNav{
+      width:100%!important;max-width:100%!important;
+      border-radius:0!important;margin-top:0!important;
+      padding-bottom:calc(env(safe-area-inset-bottom,0px) + 14px)!important;
+    }
+    .modal{max-width:92vw;}
+  }
+  button, .action-btn, .sos-btn, .nav-item, .sheet-item{ -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+  button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+    outline:3px solid var(--yellow);outline-offset:3px;
   }
 </style>
 </head>
@@ -722,9 +600,9 @@
 <div class="stage">
 
   <div class="intro">
-    <span class="eyebrow">● Interactive prototype</span>
+    <span class="eyebrow"><span class="dot"></span> Interactive prototype</span>
     <h1>Guardian, your campus safety companion</h1>
-    <p>A working click-through of the NMU safety app — SOS alerts, live Safe Walk escorting, guardian contacts, and campus reporting, all in one place.</p>
+    <p>A working click-through of the NMU safety app - SOS alerts, live Safe Walk escorting, guardian contacts, and campus reporting, all in one place.</p>
     <ul class="taplist">
       <li><span class="dot"></span><span><b>Tap the SOS circle</b> to trigger the emergency countdown and alert flow.</span></li>
       <li><span class="dot"></span><span><b>Start Safe Walk</b> to preview live route tracking with guardians watching.</span></li>
@@ -737,39 +615,120 @@
       <div class="notch"></div>
       <div class="screen-viewport" id="viewport">
 
-        <!-- HOME -->
-        <section class="screen active on-navy" data-screen="home">
+        <!-- LANDING -->
+        <section class="screen active on-navy" data-screen="landing">
+          <div class="landing-body">
+            <div class="landing-mark" data-icon="shield"></div>
+            <h1>Guardian</h1>
+            <p>Your campus safety companion. Sign in to see your dashboard, or create an account to get started.</p>
+            <div class="landing-actions">
+              <button class="landing-btn-primary" data-goto="signin">Sign in</button>
+              <button class="landing-btn-secondary" data-goto="signup">Create an account</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- SIGN IN -->
+        <section class="screen on-navy" data-screen="signin">
           <div class="screen-body">
+            <div class="topbar">
+              <button class="back-btn" data-goto="landing" aria-label="Back to landing" data-icon="arrow-left"></button>
+              <h2>Sign in</h2>
+            </div>
+            <div class="subtitle">Welcome back to Guardian</div>
+
+            <div class="role-toggle" id="signinRoleToggle">
+              <button type="button" class="active" data-role="student">Student</button>
+              <button type="button" data-role="security">Campus Security</button>
+            </div>
+
+            <div class="field">
+              <label>Email</label>
+              <input type="email" id="signinEmail" placeholder="you@mandela.ac.za">
+              <div class="field-error" id="signinEmailError"></div>
+            </div>
+            <div class="field">
+              <label>Password</label>
+              <input type="password" id="signinPassword" placeholder="Enter your password">
+              <div class="field-error" id="signinPasswordError"></div>
+            </div>
+            <button class="submit-btn" id="signinBtn">Sign in</button>
+            <div class="auth-switch">Don't have an account? <button type="button" data-goto="signup">Sign up</button></div>
+          </div>
+        </section>
+
+        <!-- SIGN UP -->
+        <section class="screen on-navy" data-screen="signup">
+          <div class="screen-body">
+            <div class="topbar">
+              <button class="back-btn" data-goto="landing" aria-label="Back to landing" data-icon="arrow-left"></button>
+              <h2>Create account</h2>
+            </div>
+            <div class="subtitle">Set up your Guardian profile</div>
+
+            <div class="field">
+              <label>Full name</label>
+              <input type="text" id="signupName" placeholder="e.g. Thandiwe Mahlangu">
+              <div class="field-error" id="signupNameError"></div>
+            </div>
+            <div class="field">
+              <label>Student email</label>
+              <input type="email" id="signupEmail" placeholder="you@mandela.ac.za">
+              <div class="field-error" id="signupEmailError"></div>
+            </div>
+            <div class="field">
+              <label>Student number</label>
+              <input type="text" id="signupStudentNo" placeholder="e.g. 229180000">
+              <div class="field-error" id="signupStudentNoError"></div>
+            </div>
+            <div class="field">
+              <label>Password</label>
+              <input type="password" id="signupPassword" placeholder="Create a password">
+              <div class="field-error" id="signupPasswordError"></div>
+            </div>
+            <button class="submit-btn" id="signupBtn">Create account</button>
+            <div class="auth-switch">Already have an account? <button type="button" data-goto="signin">Sign in</button></div>
+          </div>
+        </section>
+
+        <!-- HOME -->
+        <section class="screen on-navy" data-screen="home">
+          <div class="screen-body">
+            <div class="prototype-badge">Hackathon prototype - all emergency actions are simulated</div>
             <div class="status-pill">
               <span class="status-dot"></span>
               <div>
                 <strong>You're on campus</strong>
-                <span>NMU Main Campus · Safe &amp; connected</span>
+                <span id="homeLocationText">NMU Main Campus - Safe &amp; connected</span>
               </div>
             </div>
 
             <div class="sos-zone">
-              <div class="sos-caption">DOUBLE-TAP WHEN IN DANGER</div>
+              <div class="sos-caption">TAP WHEN IN DANGER</div>
               <button class="sos-btn" id="sosBtn">SOS</button>
-              <div class="sos-hint">Notifies campus dispatch and your trusted guardians instantly</div>
+              <div class="sos-hint">You're doing the right thing by reaching out. This simulates notifying campus dispatch and your trusted guardians instantly.</div>
             </div>
 
             <div class="action-list">
               <button class="action-btn" data-goto="safewalk">
-                <span class="action-icon">🚶</span>
+                <span class="action-icon" data-icon="route"></span>
                 <span>Start Safe Walk<small>Share your route live</small></span>
               </button>
+              <button class="action-btn" data-goto="alerts">
+                <span class="action-icon" data-icon="bell"></span>
+                <span>Safety Alerts<small id="alertCountText">Campus updates</small></span>
+              </button>
               <button class="action-btn" data-goto="report">
-                <span class="action-icon">⚠️</span>
+                <span class="action-icon" data-icon="clipboard"></span>
                 <span>Report a concern<small>Submit anonymously</small></span>
               </button>
               <button class="action-btn" data-goto="resources">
-                <span class="action-icon">📞</span>
+                <span class="action-icon" data-icon="phone"></span>
                 <span>Directory<small>Key emergency lines</small></span>
               </button>
               <button class="action-btn" data-goto="guardians">
-                <span class="action-icon">🛡️</span>
-                <span>My Guardians<small>3 trusted contacts</small></span>
+                <span class="action-icon" data-icon="users"></span>
+                <span>My Guardians<small id="guardianCountText">3 trusted contacts</small></span>
               </button>
             </div>
           </div>
@@ -781,21 +740,30 @@
             <div class="badge-emergency">EMERGENCY SOS ACTIVATED</div>
             <div class="status-line">ALERTING RESPONDERS SHORTLY</div>
             <div class="count-ring" id="countRing">3</div>
-            <div class="live-line">Sharing live location coordinates…</div>
-            <button class="btn-link" id="cancelCountdown">Cancel — I'm OK</button>
+            <div class="live-line" id="countdownLocation">Acquiring simulated location...</div>
+            <button class="btn-link" id="cancelCountdown">Cancel - I'm OK</button>
           </div>
         </section>
 
         <!-- SOS ACTIVE -->
         <section class="screen on-navy overlay" data-screen="sosactive">
-          <div class="center-col" style="justify-content:flex-start; padding-top:56px;">
-            <div class="badge-emergency">EMERGENCY SOS ACTIVATED</div>
-            <div class="info-card">📍 Your live location is being broadcast to NMU security and your 3 guardians.</div>
-            <div class="full-actions">
-              <button class="btn-solid">📞 Call campus security now</button>
-              <button class="btn-solid">🛡️ Alert guardians instantly</button>
+          <div class="center-col" style="justify-content:flex-start; padding-top:36px;">
+            <div class="badge-emergency">EMERGENCY SOS ACTIVE</div>
+            <div class="info-card" style="margin-bottom:14px;">
+              <span data-icon="radio"></span>
+              <div>
+                <strong>Incident #<span id="sosIncidentId">Pending</span></strong>
+                <div style="font-weight:600;font-size:11px;margin-top:2px;" id="sosIncidentLoc">Location pending...</div>
+              </div>
             </div>
-            <button class="btn-link" id="cancelActive">Cancel — I'm OK</button>
+            <div class="sos-status-list" id="sosStatusList">
+              <div class="sos-status-item"><span class="dot-status pending"></span> Acquiring location...</div>
+            </div>
+            <div class="full-actions">
+              <a href="tel:+27332603333" class="btn-solid" style="text-decoration:none;"><span data-icon="phone"></span> Call campus security</a>
+              <button class="btn-solid" id="alertGuardiansBtn"><span data-icon="bell"></span> Alert guardians again</button>
+            </div>
+            <button class="btn-link" id="cancelActive">Cancel - I'm OK</button>
           </div>
         </section>
 
@@ -803,27 +771,29 @@
         <section class="screen on-navy" data-screen="safewalk">
           <div class="screen-body">
             <div class="topbar">
-              <button class="back-btn" data-goto="home">←</button>
-              <div>
-                <h2>Safe Walk Live</h2>
-              </div>
+              <button class="back-btn" data-goto="home" aria-label="Back to home" data-icon="arrow-left"></button>
+              <div><h2>Safe Walk Live</h2></div>
             </div>
             <div class="subtitle">Virtually escorted by the NMU community</div>
 
-            <div class="map-card">
-              <div class="map-grid"></div>
-              <div class="map-walker"></div>
-              <div class="map-pin"></div>
+            <div class="field" style="margin-bottom:12px;">
+              <label>Simulated zone</label>
+              <select id="walkZoneSelect"></select>
+            </div>
+
+            <div class="map-card" id="mapCard">
+              <div id="liveMap"></div>
+              <div class="location-status" id="locationStatus">Waiting for simulated location...</div>
             </div>
 
             <div class="stat-row">
               <div class="stat-box">
                 <span>ESTIMATED ARRIVAL</span>
-                <strong>10 min</strong>
+                <strong id="walkETA">Pending</strong>
               </div>
               <div class="stat-box">
                 <span>REMAINING DISTANCE</span>
-                <strong>0.6 km</strong>
+                <strong id="walkDistance">Pending</strong>
               </div>
             </div>
 
@@ -832,8 +802,54 @@
               <span class="live-tag">LIVE</span>
             </div>
 
-            <button class="btn-mint" data-goto="home">✓ I've arrived safely</button>
-            <button class="btn-coral-outline" data-goto="countdown">⚠ I need help ASAP!</button>
+            <button class="btn-mint" id="arrivedSafeBtn"><span data-icon="check"></span> I've arrived safely</button>
+            <button class="btn-coral-outline" data-goto="countdown"><span data-icon="alert"></span> I need help ASAP!</button>
+          </div>
+        </section>
+
+        <!-- SAFETY ALERTS -->
+        <section class="screen on-navy" data-screen="alerts">
+          <div class="screen-body">
+            <div class="topbar">
+              <button class="back-btn" data-goto="home" aria-label="Back to home" data-icon="arrow-left"></button>
+              <h2>Safety Alerts</h2>
+            </div>
+            <div class="subtitle">Official updates from Campus Protection Services</div>
+            <div id="safetyAlertsList"></div>
+          </div>
+        </section>
+
+        <!-- RESPONDER DASHBOARD -->
+        <section class="screen on-navy" data-screen="dashboard">
+          <div class="screen-body">
+            <div class="topbar">
+              <button class="back-btn" data-goto="home" aria-label="Back to home" data-icon="arrow-left"></button>
+              <h2>Responder Dashboard</h2>
+            </div>
+            <div class="subtitle">Campus Security - tap a status chip to advance it</div>
+            <div id="responderAlertsList"></div>
+          </div>
+        </section>
+
+        <!-- PRIVACY NOTICE -->
+        <section class="screen on-navy" data-screen="privacy">
+          <div class="screen-body">
+            <div class="topbar">
+              <button class="back-btn" data-goto="home" aria-label="Back to home" data-icon="arrow-left"></button>
+              <h2>Privacy Notice</h2>
+            </div>
+            <div class="privacy-section">
+              <h3>What we collect</h3>
+              <p>When you trigger an SOS or start a Safe Walk, Guardian shares your approximate location, the time, and your student identifier with Campus Protection Services and the trusted guardians you've added. Incident reports collect only what you choose to enter, and can be submitted anonymously.</p>
+            </div>
+            <div class="privacy-section">
+              <h3>Who can see it</h3>
+              <p>Location and alert data during an active SOS or Safe Walk session is visible to Campus Protection Services and your chosen guardians only. It is not visible to other students or staff outside that response.</p>
+            </div>
+            <div class="privacy-section">
+              <h3>Data retention</h3>
+              <p>Incident and alert records are kept only as long as needed to review and resolve the case, in line with NMU's data protection policy. This is a hackathon prototype - no data shown here is collected from a real device or real people.</p>
+            </div>
           </div>
         </section>
 
@@ -841,25 +857,14 @@
         <section class="screen on-navy" data-screen="guardians">
           <div class="screen-body">
             <div class="topbar">
-              <button class="back-btn" data-goto="home">←</button>
+              <button class="back-btn" data-goto="home" aria-label="Back to home" data-icon="arrow-left"></button>
               <h2>My Guardians</h2>
             </div>
-            <div class="subtitle">Virtually escorted by the NMU community</div>
+            <div class="subtitle">These contacts are notified during SOS and Safe Walk check-ins</div>
 
-            <div class="guardian-row">
-              <span class="avatar-circ">SK</span>
-              <div><strong>Sipho Khumalo</strong><span class="tag">Primary guardian</span></div>
-            </div>
-            <div class="guardian-row">
-              <span class="avatar-circ">SC</span>
-              <div><strong>Sarah Connor</strong><span class="tag">Roommate</span></div>
-            </div>
-            <div class="guardian-row">
-              <span class="avatar-circ">JM</span>
-              <div><strong>Jessica Miller</strong><span class="tag">Family</span></div>
-            </div>
+            <div id="guardianList"></div>
 
-            <button class="add-row"><span class="plus-circ">+</span> Add safety contact</button>
+            <button class="add-row" id="addGuardianBtn"><span class="plus-circ">+</span> Add safety contact</button>
 
             <div class="note-card">These people are automatically notified by SMS if you trigger SOS, or if you miss a check-in during a Safe Walk.</div>
           </div>
@@ -869,29 +874,36 @@
         <section class="screen on-navy" data-screen="report">
           <div class="screen-body">
             <div class="topbar">
-              <button class="back-btn" data-goto="home">←</button>
+              <button class="back-btn" data-goto="home" aria-label="Back to home" data-icon="arrow-left"></button>
               <h2>Report a Concern</h2>
             </div>
             <div class="subtitle">Help improve campus safety for everyone</div>
 
             <div class="field">
-              <label>What happened?</label>
-              <input type="text" placeholder="e.g. lighting issue">
+              <label>What happened? *</label>
+              <input type="text" id="reportType" placeholder="e.g. lighting issue, harassment">
+              <div class="field-error" id="reportTypeError"></div>
             </div>
             <div class="field">
-              <label>Where?</label>
-              <input type="text" placeholder="Select a location on the map">
+              <label>Where? *</label>
+              <input type="text" id="reportLocation" placeholder="e.g. North Campus, Building 4">
+              <div class="field-error" id="reportLocationError"></div>
             </div>
             <div class="field">
-              <label>When?</label>
-              <input type="text" placeholder="Type or choose a time">
+              <label>When? *</label>
+              <input type="text" id="reportWhen" placeholder="e.g. Today, 15:32">
+              <div class="field-error" id="reportWhenError"></div>
             </div>
             <div class="field">
               <label>Describe what happened</label>
-              <textarea placeholder="Share as much detail as you're comfortable with"></textarea>
+              <textarea id="reportDesc" placeholder="Share as much detail as you're comfortable with"></textarea>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="reportAnonymous" checked>
+              <label for="reportAnonymous" style="margin:0;color:var(--white);">Submit anonymously</label>
             </div>
 
-            <button class="submit-btn" data-goto="submitted">✓ Submit report</button>
+            <button class="submit-btn" id="submitReportBtn"><span data-icon="check"></span> Submit report</button>
           </div>
         </section>
 
@@ -899,9 +911,11 @@
         <section class="screen on-white" data-screen="submitted">
           <div class="center-col">
             <div class="toast-pill">
-              <span class="check-badge">✓</span>
+              <span class="check-badge" data-icon="check"></span>
               Report submitted
             </div>
+            <div class="report-id" id="reportIdText">#R-00000</div>
+            <div class="report-meta">Received by Campus Safety</div>
             <button class="ok-btn" data-goto="home">OK</button>
           </div>
         </section>
@@ -910,37 +924,16 @@
         <section class="screen on-navy" data-screen="resources">
           <div class="screen-body">
             <div class="topbar">
-              <button class="back-btn" data-goto="home">←</button>
+              <button class="back-btn" data-goto="home" aria-label="Back to home" data-icon="arrow-left"></button>
               <h2>Safety Resources</h2>
             </div>
             <div class="subtitle">Tap any line to call directly</div>
 
-            <div class="search-box">🔍 Search campus directory…</div>
+            <div class="search-box">
+                 <input type="text" id="directorySearch" placeholder="Search campus directory...">
+            </div>
 
-            <div class="res-row">
-              <span class="res-icon">📞</span>
-              <div><strong>Protection Services</strong><span>Emergency response &amp; escort services</span></div>
-            </div>
-            <div class="res-row">
-              <span class="res-icon">📞</span>
-              <div><strong>Student Counselling</strong><span>Mon–Fri, 08:00–16:30 · Crisis support</span></div>
-            </div>
-            <div class="res-row">
-              <span class="res-icon">📞</span>
-              <div><strong>Residence Support</strong><span>After-hours warden crisis response</span></div>
-            </div>
-            <div class="res-row">
-              <span class="res-icon">📞</span>
-              <div><strong>SAPS Emergency Response</strong><span>South African Police Service</span></div>
-            </div>
-            <div class="res-row">
-              <span class="res-icon">📞</span>
-              <div><strong>National GBV Helpline</strong><span>24/7 gender-based violence support</span></div>
-            </div>
-            <div class="res-row">
-              <span class="res-icon">📞</span>
-              <div><strong>After-hours Shuttle</strong><span>NMU campus connection line</span></div>
-            </div>
+            <div id="directoryList"></div>
           </div>
         </section>
 
@@ -948,32 +941,34 @@
         <section class="screen on-navy" data-screen="profile">
           <div class="screen-body">
             <div class="topbar">
-              <button class="back-btn" data-goto="home">←</button>
+              <button class="back-btn" data-goto="home" aria-label="Back to home" data-icon="arrow-left"></button>
               <h2>Guard Profile</h2>
             </div>
 
             <div class="profile-card">
-              <span class="avatar-circ" style="background:#c9cdf5;color:#101a4d;">NM</span>
-              <div><strong>Nkosinathi Mthembu</strong><span>Student no. 229180000</span></div>
+              <span class="avatar-circ" id="profileInitials" style="background:#c9cdf5;color:#101a4d;">NM</span>
+              <div><strong id="profileName">Nkosinathi Mthembu</strong><span id="profileStudentNo">Student no. 229180000</span></div>
             </div>
 
             <div class="section-label">APP SETTINGS</div>
-            <div class="setting-row">
+            <div class="setting-row" id="notifPrefsRow">
               <div><strong>Notification preferences</strong><span>Sound &amp; vibration on trigger</span></div>
-              <span>→</span>
+              <span class="setting-value" id="notifPrefsValue">On</span>
             </div>
-            <div class="setting-row">
-              <div><strong>Check-in interval</strong><span>Current: every 10 min</span></div>
-              <span>→</span>
+            <div class="setting-row" id="checkinRow">
+              <div><strong>Check-in interval</strong><span>Current: every <span id="checkinValue">10</span> min</span></div>
+              <span data-icon="chevron-right"></span>
             </div>
-            <div class="setting-row">
-              <div><strong>Location sharing</strong><span>While active or always on</span></div>
-              <span>→</span>
+            <div class="setting-row" id="locationSharingRow">
+              <div><strong>Location sharing</strong><span id="locationSharingValue">While active</span></div>
+              <span data-icon="chevron-right"></span>
             </div>
-            <div class="setting-row">
+            <div class="setting-row" id="pinLockRow">
               <div><strong>App PIN lock</strong><span>Biometrics &amp; 4-digit code</span></div>
-              <span>→</span>
+              <span class="setting-value" id="pinLockValue">On</span>
             </div>
+
+            <button class="btn-coral-outline" id="logoutBtn" style="margin-top:8px;">Log out</button>
           </div>
         </section>
 
@@ -981,30 +976,281 @@
         <div class="sheet-backdrop" id="sheetBackdrop"></div>
         <div class="sheet" id="moreSheet">
           <div class="sheet-handle"></div>
-          <h3>More</h3>
-          <button class="sheet-item" data-goto="report"><span class="sheet-icon">⚠️</span> Report a concern</button>
-          <button class="sheet-item" data-goto="resources"><span class="sheet-icon">📞</span> Safety resources</button>
-          <button class="sheet-item" data-goto="profile"><span class="sheet-icon">🛡️</span> Guard profile</button>
+          <div class="sheet-head">
+            <h3>More</h3>
+            <button class="sheet-close" id="closeSheetBtn" type="button" aria-label="Close more menu" data-icon="x"></button>
+          </div>
+          <button class="sheet-item" data-goto="report"><span class="sheet-icon" data-icon="clipboard"></span> Report a concern</button>
+          <button class="sheet-item" data-goto="resources"><span class="sheet-icon" data-icon="phone"></span> Safety resources</button>
+          <button class="sheet-item" data-goto="dashboard"><span class="sheet-icon" data-icon="radio"></span> Responder dashboard (demo)</button>
+          <button class="sheet-item" data-goto="privacy"><span class="sheet-icon" data-icon="lock"></span> Privacy notice</button>
+          <button class="sheet-item" data-goto="profile"><span class="sheet-icon" data-icon="user"></span> Guard profile</button>
         </div>
+
+        <!-- ADD GUARDIAN MODAL -->
+        <div class="modal-overlay" id="guardianModal">
+          <div class="modal">
+            <h3>Add safety contact</h3>
+            <div class="field">
+              <label>Full name</label>
+              <input type="text" id="newGuardianName" placeholder="e.g. Thandi Nkosi">
+              <div class="field-error" id="newGuardianNameError"></div>
+            </div>
+            <div class="field">
+              <label>Phone number</label>
+              <input type="tel" id="newGuardianPhone" placeholder="+27 82 123 4567">
+              <div class="field-error" id="newGuardianPhoneError"></div>
+            </div>
+            <div class="field">
+              <label>Relationship</label>
+              <input type="text" id="newGuardianRelation" placeholder="e.g. Friend, Family">
+            </div>
+            <div class="modal-actions">
+              <button class="btn-secondary" id="cancelGuardianBtn">Cancel</button>
+              <button class="btn-primary" id="saveGuardianBtn">Send verification</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHECK-IN MODAL -->
+        <div class="modal-overlay" id="checkinModal">
+          <div class="modal">
+            <h3>Are you safe?</h3>
+            <p style="font-size:13px;color:#6b7094;margin:0 0 16px;">Your Safe Walk check-in is overdue. Please confirm.</p>
+            <div class="modal-actions">
+              <button class="btn-primary" id="confirmSafeBtn">Yes, I'm safe</button>
+              <button class="btn-secondary" id="needHelpBtn">No, I need help</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="app-toast" id="appToast" role="status" aria-live="polite"></div>
 
       </div>
     </div>
 
-    <!-- BOTTOM NAV (outside viewport clipping, styled to sit at phone bottom) -->
+    <!-- Bottom nav injected here -->
+    <div class="bottom-nav" id="bottomNav" style="width:340px;max-width:92vw;border-radius:0 0 22px 22px;margin-top:-18px;padding-top:16px;position:relative;z-index:2;box-shadow:0 24px 40px -20px rgba(0,0,0,.5);">
+      <button class="nav-item" data-nav="home" data-goto="home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+        Home
+      </button>
+      <button class="nav-item" data-nav="walk" data-goto="safewalk">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2"/><path d="M9 22l1-6-3-2 2-6 4 2 3 4-2 6"/></svg>
+        Walk
+      </button>
+      <button class="nav-item" data-nav="contacts" data-goto="guardians">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+        Contacts
+      </button>
+      <button class="nav-item more" data-nav="more">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+        More
+      </button>
+    </div>
   </div>
 </div>
 
 <script>
 (function(){
+  'use strict';
+
+  // ============================================================
+  // SIMULATED BACKEND / STATE
+  // ============================================================
+  const state = {
+    role: 'student',
+    user: {
+      name: 'Nkosinathi Mthembu',
+      studentNo: '229180000',
+      campus: 'NMU Main Campus'
+    },
+    campusZones: [
+      { id: 'library', name: 'Library Walkway', lat: -33.9608, lng: 25.6022, risk: 'normal' },
+      { id: 'parking', name: 'South Campus Parking Zone', lat: -33.9622, lng: 25.6041, risk: 'caution' },
+      { id: 'residence', name: 'Residence Block C', lat: -33.9595, lng: 25.6008, risk: 'normal' },
+      { id: 'sportsfield', name: 'Sports Field Path', lat: -33.9615, lng: 25.6055, risk: 'normal' }
+    ],
+    safetyAlerts: [
+      { id: 'SA002', title: 'Caution: Low Lighting Near Parking Area', area: 'South Campus Parking Zone', level: 'caution', time: 'Today, 17:10', message: 'Students are advised to walk in groups and use well-lit routes while maintenance is being addressed.' },
+      { id: 'SA001', title: 'Campus Shuttle Schedule Update', area: 'All Campus', level: 'info', time: 'Yesterday, 09:00', message: 'After-hours shuttle now runs every 20 minutes until midnight during exam week.' }
+    ],
+    sosAlerts: [
+      { id: 'EA001', studentLabel: 'Demo Student', type: 'Panic Alert', location: 'Near Library Walkway', time: '18:42', status: 'New', responder: 'Pending', notes: 'Help request sent. Campus security has been notified in this simulation.' }
+    ],
+    guardians: [
+      { id: 1, name: 'Sipho Khumalo', phone: '+27 82 111 2222', relation: 'Primary guardian', verified: true, initials: 'SK' },
+      { id: 2, name: 'Sarah Connor', phone: '+27 83 333 4444', relation: 'Roommate', verified: true, initials: 'SC' },
+      { id: 3, name: 'Jessica Miller', phone: '+27 84 555 6666', relation: 'Family', verified: true, initials: 'JM' }
+    ],
+    settings: {
+      notifications: true,
+      checkinInterval: 10,
+      locationSharing: 'While active',
+      pinLock: true
+    },
+    currentSOS: null,
+    currentWalk: null,
+    reports: [],
+    directory: [
+      { name: 'Protection Services', phone: '+27332603333', desc: 'Emergency response & escort services' },
+      { name: 'Student Counselling', phone: '+27332601111', desc: 'Mon-Fri, 08:00-16:30 - Crisis support' },
+      { name: 'Residence Support', phone: '+27332602222', desc: 'After-hours warden crisis response' },
+      { name: 'SAPS Emergency Response', phone: '10111', desc: 'South African Police Service' },
+      { name: 'National GBV Helpline', phone: '0800428428', desc: '24/7 gender-based violence support' },
+      { name: 'After-hours Shuttle', phone: '+27332604444', desc: 'NMU campus connection line' }
+    ],
+    livePosition: null,
+    liveAccuracy: null,
+    locationWatcher: null,
+    liveMap: null,
+    userMarker: null,
+    walkInterval: null,
+    checkinTimer: null,
+    sosLocationInterval: null,
+    sosStartTime: null
+  };
+
+  const STATUS_CYCLE = ['New', 'Acknowledged', 'ResponderDispatched', 'Resolved'];
+
+  // ============================================================
+  // DOM REFS
+  // ============================================================
   const viewport = document.getElementById('viewport');
   const screens = viewport.querySelectorAll('.screen');
   const sheet = document.getElementById('moreSheet');
   const sheetBackdrop = document.getElementById('sheetBackdrop');
+  const navRoot = document.getElementById('bottomNav');
 
+  // UTILITIES
+  const ICONS = {
+    shield: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/><path d="M12 8v8M8 12h8"/></svg>',
+    'arrow-left': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>',
+    route: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h5a3 3 0 0 1 0 6h-2a3 3 0 0 0 0 6h5"/></svg>',
+    bell: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>',
+    clipboard: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l1 2h3v15H5V6h3l1-2z"/><path d="M9 12h6M9 16h4"/></svg>',
+    phone: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7l.4 2.7a2 2 0 0 1-.6 1.8L7.7 9.4a16 16 0 0 0 6.9 6.9l1.2-1.2a2 2 0 0 1 1.8-.6l2.7.4a2 2 0 0 1 1.7 2z"/></svg>',
+    users: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></svg>',
+    radio: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.9 19.1a10 10 0 0 1 0-14.2"/><path d="M7.8 16.2a6 6 0 0 1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.5"/><path d="M19.1 4.9a10 10 0 0 1 0 14.2"/></svg>',
+    alert: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 9v5M12 18h.01"/></svg>',
+    check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+    user: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3-7 8-7s8 3 8 7"/></svg>',
+    'chevron-right': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>',
+    x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>'
+  };
+
+  function injectIcons(root){
+    (root || document).querySelectorAll('[data-icon]').forEach(el => {
+      const svg = ICONS[el.dataset.icon];
+      if (svg) el.innerHTML = svg;
+    });
+  }
+
+  let toastTimer = null;
+  function showToast(message){
+    const toast = document.getElementById('appToast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add('active');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('active'), 2600);
+  }
+
+  function setFieldError(inputId, message){
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const field = input.closest('.field');
+    const error = document.getElementById(`${inputId}Error`);
+    field && field.classList.toggle('has-error', Boolean(message));
+    input.setAttribute('aria-invalid', message ? 'true' : 'false');
+    if (error){
+      error.textContent = message || '';
+      if (message) input.setAttribute('aria-describedby', error.id);
+      else input.removeAttribute('aria-describedby');
+    }
+  }
+
+  function clearFieldError(inputId){ setFieldError(inputId, ''); }
+
+  function isMandelaEmail(value){
+    return /^[^\s@]+@mandela\.ac\.za$/i.test(value);
+  }
+
+  function isNineDigitStudentNo(value){
+    return /^\d{9}$/.test(value);
+  }
+  
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function nowTime(){
+    const d = new Date();
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  function shortTime(){
+    const d = new Date();
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function genId(prefix, min, max){
+    const n = Math.floor(Math.random() * (max - min + 1)) + min;
+    return `${prefix}-${n}`;
+  }
+  function saveState(){
+    try {
+      localStorage.setItem('guardian_state', JSON.stringify({
+        guardians: state.guardians,
+        settings: state.settings,
+        reports: state.reports
+      }));
+    } catch(e){ /* ignore */ }
+  }
+  function loadState(){
+    try {
+      const raw = localStorage.getItem('guardian_state');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return;
+      if (Array.isArray(parsed.guardians)) state.guardians = parsed.guardians;
+      if (parsed.settings && typeof parsed.settings === 'object') state.settings = Object.assign(state.settings, parsed.settings);
+      if (Array.isArray(parsed.reports)) state.reports = parsed.reports;
+    } catch(e){ /* ignore */ }
+  }
+
+  
+  // SCREEN NAVIGATION
+  function closeModals(){
+    document.querySelectorAll('.modal-overlay.active').forEach(modal => modal.classList.remove('active'));
+  }
+  
   function show(name){
+    if (!viewport.querySelector(`[data-screen="${name}"]`)){
+      showToast('That prototype screen is not available yet.');
+      return;
+    }
     screens.forEach(s => s.classList.toggle('active', s.dataset.screen === name));
     closeSheet();
+    closeModals();
     updateNav(name);
+
+    const hideNav = ['landing','signin','signup'].includes(name);
+    navRoot.style.display = hideNav ? 'none' : 'flex';
+
+    if (name === 'safewalk') {
+      setTimeout(() => {
+        ensureMap();
+        if (state.liveMap) {
+          state.liveMap.invalidateSize();
+        }
+        startWalkTracking();
+      }, 350);
+    } else {
+      stopWalkTracking();
+    }
+
+    if (name === 'guardians') renderGuardians();
+    if (name === 'resources') renderDirectory();
+    if (name === 'profile') renderSettings();
+    if (name === 'alerts') renderSafetyAlerts();
+    if (name === 'dashboard') renderResponderAlerts();
   }
 
   function closeSheet(){
@@ -1018,78 +1264,30 @@
 
   document.body.addEventListener('click', (e) => {
     const t = e.target.closest('[data-goto]');
-    if (t){ show(t.dataset.goto); }
+    if (t && navRoot.contains(t)) return;
+    if (t){
+      e.preventDefault();
+      if (t.dataset.goto === 'countdown') runCountdown();
+      else show(t.dataset.goto);
+    }
   });
 
   sheetBackdrop.addEventListener('click', closeSheet);
+  document.getElementById('closeSheetBtn').addEventListener('click', closeSheet);
+  viewport.addEventListener('click', (e) => {
+    if (!sheet.classList.contains('active')) return;
+    if (sheet.contains(e.target)) return;
+    closeSheet();
+  }, true);
 
-  // SOS flow
-  const sosBtn = document.getElementById('sosBtn');
-  const ring = document.getElementById('countRing');
-  let countdownTimer = null;
-
-  function runCountdown(){
-    show('countdown');
-    let n = 3;
-    ring.textContent = n;
-    clearInterval(countdownTimer);
-    countdownTimer = setInterval(() => {
-      n -= 1;
-      if (n <= 0){
-        clearInterval(countdownTimer);
-        show('sosactive');
-        return;
-      }
-      ring.textContent = n;
-    }, 900);
-  }
-
-  sosBtn.addEventListener('click', runCountdown);
-
-  document.getElementById('cancelCountdown').addEventListener('click', () => {
-    clearInterval(countdownTimer);
-    show('home');
-  });
-  document.getElementById('cancelActive').addEventListener('click', () => show('home'));
-
-  // Bottom nav
-  const navMap = { home:'home', safewalk:'walk', guardians:'contacts' };
-  const navRoot = document.createElement('div');
-  navRoot.className = 'bottom-nav';
-  navRoot.innerHTML = `
-    <button class="nav-item" data-nav="home" data-goto="home">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
-      Home
-    </button>
-    <button class="nav-item" data-nav="walk" data-goto="safewalk">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2"/><path d="M9 22l1-6-3-2 2-6 4 2 3 4-2 6"/></svg>
-      Walk
-    </button>
-    <button class="nav-item" data-nav="contacts" data-goto="guardians">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
-      Contacts
-    </button>
-    <button class="nav-item more" data-nav="more">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-      More
-    </button>
-  `;
-  document.querySelector('.phone').insertAdjacentElement('afterend', navRoot);
-  document.querySelector('.phone-wrap').style.display = 'flex';
-  document.querySelector('.phone-wrap').style.flexDirection = 'column';
-  document.querySelector('.phone-wrap').style.alignItems = 'center';
-  navRoot.style.width = '340px';
-  navRoot.style.maxWidth = '92vw';
-  navRoot.style.borderRadius = '0 0 22px 22px';
-  navRoot.style.marginTop = '-18px';
-  navRoot.style.paddingTop = '16px';
-  navRoot.style.position = 'relative';
-  navRoot.style.zIndex = '2';
-  navRoot.style.boxShadow = '0 24px 40px -20px rgba(0,0,0,.5)';
-
+  
+  // NAV
+  
   navRoot.addEventListener('click', (e) => {
     const item = e.target.closest('.nav-item');
     if (!item) return;
+    e.preventDefault();
+    e.stopPropagation();
     if (item.dataset.nav === 'more'){
       sheet.classList.contains('active') ? closeSheet() : openSheet();
       updateNav(null, true);
@@ -1108,14 +1306,727 @@
     let key = 'home';
     if (screenName === 'safewalk') key = 'walk';
     else if (screenName === 'guardians') key = 'contacts';
-    else if (['report','resources','profile','submitted'].includes(screenName)) key = null;
+    else if (['report','resources','profile','submitted','alerts','dashboard','privacy'].includes(screenName)) key = null;
     if (key){
       const active = navRoot.querySelector(`[data-nav="${key}"]`);
       if (active) active.classList.add('active');
     }
   }
 
-  updateNav('home');
+  
+  // ROLE TOGGLE (sign-in screen) - demo only, no real auth
+  
+  const signinRoleToggle = document.getElementById('signinRoleToggle');
+  let signinRole = 'student';
+  if (signinRoleToggle){
+    signinRoleToggle.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-role]');
+      if (!btn) return;
+      signinRole = btn.dataset.role;
+      signinRoleToggle.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+    });
+  }
+
+  
+  // SIMULATED LOCATION (no real device GPS - prototype uses
+  // sample campus zones, per hackathon spec: real-time GPS is
+  // out of scope for this prototype)
+  
+  function jitter(v, amount){ return v + (Math.random() - 0.5) * amount; }
+
+  function getZone(id){
+    return state.campusZones.find(z => z.id === id) || state.campusZones[0];
+  }
+
+  function startSimulatedLocation(zoneId, onUpdate){
+    const zone = getZone(zoneId);
+    state.currentZone = zone.id;
+
+    function tick(){
+      const lat = jitter(zone.lat, 0.0006);
+      const lng = jitter(zone.lng, 0.0006);
+      state.livePosition = [lat, lng];
+      state.liveAccuracy = Math.round(8 + Math.random() * 10);
+      if (onUpdate) onUpdate({ lat, lng, acc: state.liveAccuracy, zone });
+    }
+    tick();
+    return setInterval(tick, 4000);
+  }
+
+  function stopSimulatedLocation(handle){
+    if (handle) clearInterval(handle);
+  }
+
+  
+  // MAP (Leaflet) - decorative, showing the simulated position
+  
+  function ensureMap(){
+    if (state.liveMap) return state.liveMap;
+    const el = document.getElementById('liveMap');
+    if (!el) return null;
+    if (typeof L === 'undefined'){
+      return null;
+    }
+
+    try {
+      state.liveMap = L.map(el, { zoomControl: false }).setView([-33.9608, 25.6022], 15);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd',
+        maxZoom: 20,
+        attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a> &copy; OpenStreetMap contributors'
+      }).addTo(state.liveMap);
+      return state.liveMap;
+    } catch(e) {
+      state.liveMap = null;
+      return null;
+    }
+  }
+
+  // SAFE WALK
+  
+  function populateZoneSelect(){
+    const sel = document.getElementById('walkZoneSelect');
+    if (!sel || sel.options.length) return;
+    state.campusZones.forEach(z => {
+      const opt = document.createElement('option');
+      opt.value = z.id;
+      opt.textContent = z.risk === 'caution' ? `${z.name} (caution)` : z.name;
+      sel.appendChild(opt);
+    });
+    sel.value = state.currentZone || state.campusZones[0].id;
+  }
+
+  function startWalkTracking(){
+    const status = document.getElementById('locationStatus');
+    const map = ensureMap();
+    populateZoneSelect();
+    if (!map){
+      status.textContent = 'Map unavailable - simulated location still active';
+      if (state.locationWatcher !== null) return;
+      const zoneId = document.getElementById('walkZoneSelect').value || state.currentZone;
+      state.locationWatcher = startSimulatedLocation(zoneId, ({ acc, zone }) => {
+        status.textContent = `Simulated - ${zone.name} - accuracy ${acc}m`;
+        document.getElementById('walkDistance').textContent = '0.6 km';
+        document.getElementById('walkETA').textContent = '10 min';
+      });
+      return;
+    }
+
+    // If already running, don't restart
+    if (state.locationWatcher !== null) return;
+
+    const zoneId = document.getElementById('walkZoneSelect').value || state.currentZone;
+    state.currentWalk = {
+      zoneId,
+      startedAt: new Date().toISOString(),
+      status: 'active'
+    };
+
+    state.locationWatcher = startSimulatedLocation(zoneId, ({ lat, lng, acc, zone }) => {
+      status.textContent = `Simulated - ${zone.name} - accuracy ${acc}m`;
+
+      if (!state.userMarker){
+        state.userMarker = L.marker([lat, lng]).addTo(map).bindPopup('You are here (simulated)');
+        map.setView([lat, lng], 17);
+      } else {
+        state.userMarker.setLatLng([lat, lng]);
+      }
+
+      // Update ETA / distance (simulated based on movement)
+      const distance = (Math.random() * 0.4 + 0.2).toFixed(1);
+      const eta = Math.max(1, Math.round(parseFloat(distance) * 15));
+      document.getElementById('walkDistance').textContent = `${distance} km`;
+      document.getElementById('walkETA').textContent = `${eta} min`;
+    });
+
+    // Start a check-in timer
+    const interval = state.settings.checkinInterval;
+    if (state.checkinTimer) clearInterval(state.checkinTimer);
+    state.checkinTimer = setInterval(() => {
+      if (document.querySelector('[data-screen="safewalk"]').classList.contains('active')){
+        showCheckinModal();
+      }
+    }, interval * 60 * 1000);
+
+    // Initialize ETA/distance
+    document.getElementById('walkETA').textContent = '10 min';
+    document.getElementById('walkDistance').textContent = '0.6 km';
+  }
+
+  function stopWalkTracking(){
+    if (state.checkinTimer){
+      clearInterval(state.checkinTimer);
+      state.checkinTimer = null;
+    }
+    if (state.locationWatcher !== null){
+      stopSimulatedLocation(state.locationWatcher);
+      state.locationWatcher = null;
+    }
+  }
+
+  document.getElementById('walkZoneSelect') && document.getElementById('walkZoneSelect').addEventListener('change', (e) => {
+    state.currentZone = e.target.value;
+    if (state.locationWatcher !== null){
+      stopSimulatedLocation(state.locationWatcher);
+      state.locationWatcher = null;
+    }
+    startWalkTracking();
+  });
+
+  
+  // SAFETY ALERTS + RESPONDER DASHBOARD (render functions)
+  
+  function renderSafetyAlerts(){
+    const home = document.getElementById('alertCountText');
+    if (home) home.textContent = `${state.safetyAlerts.length} active update${state.safetyAlerts.length === 1 ? '' : 's'}`;
+
+    const list = document.getElementById('safetyAlertsList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (state.safetyAlerts.length === 0){
+      list.innerHTML = '<div class="note-card">No active safety alerts right now.</div>';
+      return;
+    }
+    state.safetyAlerts.forEach(a => {
+      const card = document.createElement('div');
+      card.className = `alert-card ${a.level}`;
+      card.innerHTML = `
+        <span class="alert-level">${a.level}</span>
+        <strong>${a.title}</strong>
+        <span class="alert-meta">${a.area} - ${a.time}</span>
+        <span class="alert-msg">${a.message}</span>
+      `;
+      list.appendChild(card);
+    });
+  }
+
+  function statusClassFor(status){
+    return 'status-' + status.toLowerCase().replace(/\s/g, '');
+  }
+
+  function renderResponderAlerts(){
+    const list = document.getElementById('responderAlertsList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (state.sosAlerts.length === 0){
+      list.innerHTML = '<div class="note-card">No active incidents.</div>';
+      return;
+    }
+    state.sosAlerts.forEach(a => {
+      const row = document.createElement('div');
+      row.className = 'responder-row';
+      row.innerHTML = `
+        <div class="responder-row-top">
+          <strong>${a.studentLabel} - ${a.type}</strong>
+          <button class="status-chip ${statusClassFor(a.status)}" data-alert-id="${a.id}">${a.status}</button>
+        </div>
+        <div class="responder-meta">${a.location} - ${a.time}<br>${a.notes}</div>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  // Tap a status chip on the responder dashboard to advance its status
+  document.getElementById('responderAlertsList').addEventListener('click', (e) => {
+    const chip = e.target.closest('.status-chip');
+    if (!chip) return;
+    const id = chip.dataset.alertId;
+    const alert = state.sosAlerts.find(a => a.id === id);
+    if (!alert) return;
+
+    const idx = STATUS_CYCLE.indexOf(alert.status);
+    const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+    alert.status = next;
+    alert.responder = 'Demo Responder';
+    renderResponderAlerts();
+    showToast(`Incident ${id} marked ${next}.`);
+  });
+
+  // SOS
+  
+  const sosBtn = document.getElementById('sosBtn');
+  const ring = document.getElementById('countRing');
+  let countdownTimer = null;
+  let countdownValue = 3;
+
+  function runCountdown(){
+    const zone = getZone(state.currentZone || 'library');
+    document.getElementById('countdownLocation').textContent =
+      `Simulated location: ${zone.name}`;
+    state.livePosition = [jitter(zone.lat, 0.0004), jitter(zone.lng, 0.0004)];
+    state.liveAccuracy = 9;
+
+    show('countdown');
+    countdownValue = 3;
+    ring.textContent = countdownValue;
+    clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+      countdownValue -= 1;
+      if (countdownValue <= 0){
+        clearInterval(countdownTimer);
+        activateSOS();
+        return;
+      }
+      ring.textContent = countdownValue;
+    }, 900);
+  }
+
+  sosBtn.addEventListener('click', runCountdown);
+
+  document.getElementById('cancelCountdown').addEventListener('click', () => {
+    clearInterval(countdownTimer);
+    document.getElementById('countdownLocation').textContent = 'Preparing simulated location...';
+    show('home');
+  });
+
+  function activateSOS(){
+    const incidentId = genId('G', 20000, 99999);
+    const zone = getZone(state.currentZone || 'library');
+    state.currentSOS = {
+      id: incidentId,
+      startedAt: new Date(),
+      status: 'active',
+      location: state.livePosition ? [...state.livePosition] : null,
+      accuracy: state.liveAccuracy,
+      zoneName: zone.name
+    };
+    state.sosStartTime = Date.now();
+
+    // Add to responder dashboard feed (dummy data, per FR10)
+    state.sosAlerts.unshift({
+      id: incidentId,
+      studentLabel: state.user.name,
+      type: 'Panic Alert',
+      location: `Near ${zone.name}`,
+      time: nowTime(),
+      status: 'New',
+      responder: 'Pending',
+      notes: 'Help request sent. Campus security has been notified in this simulation.'
+    });
+    renderResponderAlerts();
+
+    document.getElementById('sosIncidentId').textContent = incidentId;
+    document.getElementById('sosIncidentLoc').textContent = `Near ${zone.name} (simulated)`;
+
+    // Build status list
+    const list = document.getElementById('sosStatusList');
+    list.innerHTML = `
+      <div class="sos-status-item"><span class="dot-status sent"></span> SOS triggered</div>
+      <div class="sos-status-item"><span class="dot-status pending"></span> Sharing simulated location...</div>
+      <div class="sos-status-item"><span class="dot-status pending"></span> Notifying Campus Protection...</div>
+      <div class="sos-status-item"><span class="dot-status pending"></span> Notifying ${state.guardians.length} guardians...</div>
+    `;
+
+    show('sosactive');
+
+    // Simulate async status progression
+    setTimeout(() => {
+      const items = list.querySelectorAll('.sos-status-item');
+      if (items[1]) { items[1].querySelector('.dot-status').className = 'dot-status sent'; items[1].innerHTML = '<span class="dot-status sent"></span> Simulated location shared'; }
+      document.getElementById('sosIncidentLoc').textContent =
+        `Near ${zone.name} (accuracy ${Math.round(state.liveAccuracy || 0)}m, simulated)`;
+    }, 1500);
+
+    setTimeout(() => {
+      const items = list.querySelectorAll('.sos-status-item');
+      if (items[2]) {
+        items[2].querySelector('.dot-status').className = 'dot-status sent';
+        items[2].innerHTML = '<span class="dot-status sent"></span> Campus Protection notified';
+      }
+      const alert = state.sosAlerts.find(a => a.id === incidentId);
+      if (alert){ alert.status = 'Acknowledged'; renderResponderAlerts(); }
+    }, 2800);
+
+    setTimeout(() => {
+      const items = list.querySelectorAll('.sos-status-item');
+      if (items[3]) { items[3].querySelector('.dot-status').className = 'dot-status sent'; items[3].innerHTML = `<span class="dot-status sent"></span> ${state.guardians.length} guardians notified`; }
+      // Add "live updates" item
+      const liveItem = document.createElement('div');
+      liveItem.className = 'sos-status-item';
+      liveItem.id = 'sosLiveUpdate';
+      liveItem.innerHTML = '<span class="dot-status sent"></span> Simulated live updates active...';
+      list.appendChild(liveItem);
+    }, 4000);
+
+    // Simulated live location update loop
+    if (state.sosLocationInterval) clearInterval(state.sosLocationInterval);
+    state.sosLocationInterval = setInterval(() => {
+      if (!state.currentSOS || state.currentSOS.status !== 'active') return;
+      state.livePosition = [jitter(zone.lat, 0.0004), jitter(zone.lng, 0.0004)];
+      const live = document.getElementById('sosLiveUpdate');
+      if (live){
+        const secs = Math.round((Date.now() - state.sosStartTime) / 1000);
+        live.innerHTML = `<span class="dot-status sent"></span> Simulated live updates - last update ${secs % 30}s ago`;
+      }
+      document.getElementById('sosIncidentLoc').textContent =
+        `Near ${zone.name} (accuracy ${Math.round(state.liveAccuracy || 0)}m, simulated)`;
+    }, 5000);
+  }
+
+  document.getElementById('cancelActive').addEventListener('click', () => {
+    if (state.currentSOS){
+      state.currentSOS.status = 'cancelled';
+      const alert = state.sosAlerts.find(a => a.id === state.currentSOS.id);
+      if (alert){ alert.status = 'FalseAlarm'; renderResponderAlerts(); }
+    }
+    if (state.sosLocationInterval){
+      clearInterval(state.sosLocationInterval);
+      state.sosLocationInterval = null;
+    }
+    state.currentSOS = null;
+    show('home');
+  });
+
+  document.getElementById('alertGuardiansBtn').addEventListener('click', () => {
+    const btn = document.getElementById('alertGuardiansBtn');
+    const original = btn.innerHTML;
+    btn.innerHTML = `${ICONS.check} Guardians re-alerted`;
+    injectIcons(btn);
+    btn.disabled = true;
+    showToast('Guardians were re-alerted in this simulation.');
+    setTimeout(() => {
+      btn.innerHTML = original;
+      btn.disabled = false;
+    }, 2500);
+  });
+
+  // GUARDIANS
+  
+  const guardianModal = document.getElementById('guardianModal');
+
+  function renderGuardians(){
+    const list = document.getElementById('guardianList');
+    list.innerHTML = '';
+
+    if (state.guardians.length === 0){
+      list.innerHTML = '<div class="note-card" style="margin-bottom:14px;">No guardians yet. Add a trusted contact to get started.</div>';
+    } else {
+      state.guardians.forEach(g => {
+        const row = document.createElement('div');
+        row.className = 'guardian-row';
+        row.innerHTML = `
+          <span class="avatar-circ">${g.initials || g.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()}</span>
+          <div>
+            <strong>${g.name}${g.verified ? '<span class="verified-badge">Verified</span>' : ''}</strong>
+            <span class="tag">${g.relation} - ${g.phone}</span>
+          </div>
+          <button class="remove-btn" data-remove="${g.id}" aria-label="Remove ${g.name}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    document.getElementById('guardianCountText').textContent =
+      `${state.guardians.length} trusted contact${state.guardians.length === 1 ? '' : 's'}`;
+  }
+
+  document.getElementById('guardianList').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-remove]');
+    if (!btn) return;
+    const id = parseInt(btn.dataset.remove, 10);
+    state.guardians = state.guardians.filter(g => g.id !== id);
+    saveState();
+    renderGuardians();
+    showToast('Guardian contact removed.');
+  });
+
+  document.getElementById('addGuardianBtn').addEventListener('click', () => {
+    document.getElementById('newGuardianName').value = '';
+    document.getElementById('newGuardianPhone').value = '';
+    document.getElementById('newGuardianRelation').value = '';
+    guardianModal.classList.add('active');
+  });
+
+  document.getElementById('cancelGuardianBtn').addEventListener('click', () => {
+    guardianModal.classList.remove('active');
+  });
+
+  document.getElementById('saveGuardianBtn').addEventListener('click', () => {
+    const name = document.getElementById('newGuardianName').value.trim();
+    const phone = document.getElementById('newGuardianPhone').value.trim();
+    const relation = document.getElementById('newGuardianRelation').value.trim() || 'Contact';
+
+    clearFieldError('newGuardianName');
+    clearFieldError('newGuardianPhone');
+    let valid = true;
+    if (!name || !phone){
+      if (!name) setFieldError('newGuardianName', 'Enter a contact name.');
+      if (!phone) setFieldError('newGuardianPhone', 'Enter a phone number.');
+      valid = false;
+    }
+    if (!valid) return;
+
+    const newGuardian = {
+      id: Date.now(),
+      name,
+      phone,
+      relation,
+      verified: false,
+      initials: name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()
+    };
+    state.guardians.push(newGuardian);
+    saveState();
+    guardianModal.classList.remove('active');
+    renderGuardians();
+    showToast('Verification request simulated.');
+  });
+
+  // REPORT
+
+  document.getElementById('submitReportBtn').addEventListener('click', () => {
+    const type = document.getElementById('reportType').value.trim();
+    const location = document.getElementById('reportLocation').value.trim();
+    const when = document.getElementById('reportWhen').value.trim();
+    const desc = document.getElementById('reportDesc').value.trim();
+    const anonymous = document.getElementById('reportAnonymous').checked;
+
+    clearFieldError('reportType');
+    clearFieldError('reportLocation');
+    clearFieldError('reportWhen');
+    let reportValid = true;
+    if (!type){ setFieldError('reportType', 'Describe what happened.'); reportValid = false; }
+    if (!location){ setFieldError('reportLocation', 'Add the location.'); reportValid = false; }
+    if (!when){ setFieldError('reportWhen', 'Add when it happened.'); reportValid = false; }
+    if (!reportValid) return;
+
+    const reportId = genId('R', 10000, 99999);
+    const report = {
+      id: reportId,
+      type, location, when, desc, anonymous,
+      submittedAt: new Date().toISOString()
+    };
+    state.reports.push(report);
+    saveState();
+
+    document.getElementById('reportIdText').textContent = `#${reportId}`;
+    show('submitted');
+
+    // Reset form
+    document.getElementById('reportType').value = '';
+    document.getElementById('reportLocation').value = '';
+    document.getElementById('reportWhen').value = '';
+    document.getElementById('reportDesc').value = '';
+  });
+
+  // DIRECTORY
+
+  function renderDirectory(filter){
+    const list = document.getElementById('directoryList');
+    const q = (filter || '').toLowerCase().trim();
+    const items = state.directory.filter(d =>
+      !q || d.name.toLowerCase().includes(q) || d.desc.toLowerCase().includes(q)
+    );
+
+    list.innerHTML = '';
+    if (items.length === 0){
+      list.innerHTML = '<div class="note-card">No matching entries found.</div>';
+      return;
+    }
+
+    items.forEach(d => {
+      const a = document.createElement('a');
+      a.className = 'res-row';
+      a.href = `tel:${d.phone.replace(/\s/g,'')}`;
+      a.innerHTML = `
+        <span class="res-icon" data-icon="phone"></span>
+        <div><strong>${d.name}</strong><span>${d.desc}</span></div>
+      `;
+      list.appendChild(a);
+    });
+    injectIcons(list);
+  }
+
+  document.getElementById('directorySearch').addEventListener('input', (e) => {
+    renderDirectory(e.target.value);
+  });
+
+  // SETTINGS
+
+  function renderSettings(){
+    document.getElementById('notifPrefsValue').textContent = state.settings.notifications ? 'On' : 'Off';
+    document.getElementById('checkinValue').textContent = state.settings.checkinInterval;
+    document.getElementById('locationSharingValue').textContent = state.settings.locationSharing;
+    document.getElementById('pinLockValue').textContent = state.settings.pinLock ? 'On' : 'Off';
+    document.getElementById('profileName').textContent = state.user.name;
+    document.getElementById('profileStudentNo').textContent = `Student no. ${state.user.studentNo}`;
+    document.getElementById('profileInitials').textContent =
+      state.user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  }
+
+  document.getElementById('notifPrefsRow').addEventListener('click', () => {
+    state.settings.notifications = !state.settings.notifications;
+    saveState();
+    renderSettings();
+    showToast(`Notifications ${state.settings.notifications ? 'on' : 'off'}.`);
+  });
+
+  document.getElementById('checkinRow').addEventListener('click', () => {
+    const options = [5, 10, 15, 20, 30];
+    const currentIdx = options.indexOf(state.settings.checkinInterval);
+    const next = options[(currentIdx + 1) % options.length];
+    state.settings.checkinInterval = next;
+    saveState();
+    renderSettings();
+    showToast(`Check-in interval set to ${next} minutes.`);
+  });
+
+  document.getElementById('locationSharingRow').addEventListener('click', () => {
+    const options = ['While active', 'Always on', 'Off'];
+    const idx = options.indexOf(state.settings.locationSharing);
+    state.settings.locationSharing = options[(idx + 1) % options.length];
+    saveState();
+    renderSettings();
+    showToast(`Location sharing: ${state.settings.locationSharing}.`);
+  });
+
+  document.getElementById('pinLockRow').addEventListener('click', () => {
+    state.settings.pinLock = !state.settings.pinLock;
+    saveState();
+    renderSettings();
+    showToast(`App PIN lock ${state.settings.pinLock ? 'on' : 'off'}.`);
+  });
+
+  // SAFE WALK ACTIONS
+
+  document.getElementById('arrivedSafeBtn').addEventListener('click', () => {
+    if (state.currentWalk){
+      state.currentWalk.status = 'completed';
+      state.currentWalk = null;
+    }
+    if (state.checkinTimer){
+      clearInterval(state.checkinTimer);
+      state.checkinTimer = null;
+    }
+    show('home');
+    showToast('Safe Walk completed.');
+  });
+
+  // CHECK-IN MODAL
+  
+  const checkinModal = document.getElementById('checkinModal');
+
+  function showCheckinModal(){
+    checkinModal.classList.add('active');
+  }
+
+  document.getElementById('confirmSafeBtn').addEventListener('click', () => {
+    checkinModal.classList.remove('active');
+    showToast('Check-in confirmed.');
+  });
+
+  document.getElementById('needHelpBtn').addEventListener('click', () => {
+    checkinModal.classList.remove('active');
+    runCountdown();
+  });
+
+  
+  // AUTH (landing / sign in / sign up)
+
+  function validateSignin(){
+    const email = document.getElementById('signinEmail').value.trim();
+    const password = document.getElementById('signinPassword').value.trim();
+    clearFieldError('signinEmail');
+    clearFieldError('signinPassword');
+    let valid = true;
+    if (!email){
+      setFieldError('signinEmail', 'Enter your NMU student email.');
+      valid = false;
+    } else if (!isMandelaEmail(email)){
+      setFieldError('signinEmail', 'Use your @mandela.ac.za student email.');
+      valid = false;
+    }
+    if (!password){
+      setFieldError('signinPassword', 'Enter your password.');
+      valid = false;
+    }
+    return valid;
+  }
+
+  function validateSignup(){
+    const name = document.getElementById('signupName').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const studentNo = document.getElementById('signupStudentNo').value.trim();
+    const password = document.getElementById('signupPassword').value.trim();
+    ['signupName','signupEmail','signupStudentNo','signupPassword'].forEach(clearFieldError);
+    let valid = true;
+    if (!name){
+      setFieldError('signupName', 'Enter your full name.');
+      valid = false;
+    }
+    if (!email){
+      setFieldError('signupEmail', 'Enter your NMU student email.');
+      valid = false;
+    } else if (!isMandelaEmail(email)){
+      setFieldError('signupEmail', 'Use an address ending in @mandela.ac.za.');
+      valid = false;
+    }
+    if (!studentNo){
+      setFieldError('signupStudentNo', 'Enter your 9 digit student number.');
+      valid = false;
+    } else if (!isNineDigitStudentNo(studentNo)){
+      setFieldError('signupStudentNo', 'Student number must be exactly 9 digits.');
+      valid = false;
+    }
+    if (!password){
+      setFieldError('signupPassword', 'Create a password.');
+      valid = false;
+    }
+    return valid;
+  }
+
+  document.getElementById('signinEmail').addEventListener('blur', validateSignin);
+  document.getElementById('signinPassword').addEventListener('blur', validateSignin);
+  document.getElementById('signupName').addEventListener('blur', validateSignup);
+  document.getElementById('signupEmail').addEventListener('blur', validateSignup);
+  document.getElementById('signupStudentNo').addEventListener('blur', validateSignup);
+  document.getElementById('signupPassword').addEventListener('blur', validateSignup);
+  
+  document.getElementById('signinBtn').addEventListener('click', () => {
+    if (!validateSignin()) return;
+    if (signinRole === 'security'){
+      show('dashboard');
+    } else {
+      show('home');
+    }
+  });
+
+  document.getElementById('signupBtn').addEventListener('click', () => {
+    const name = document.getElementById('signupName').value.trim();
+    const studentNo = document.getElementById('signupStudentNo').value.trim();
+    if (!validateSignup()) return;
+    state.user.name = name;
+    state.user.studentNo = studentNo;
+    renderSettings();
+    show('home');
+  });
+
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn){
+    logoutBtn.addEventListener('click', () => {
+      document.getElementById('signinEmail').value = '';
+      document.getElementById('signinPassword').value = '';
+      show('landing');
+    });
+  }
+
+  
+  // INIT
+  
+  state.currentZone = state.campusZones[0].id;
+  loadState();
+  injectIcons(document);
+  renderGuardians();
+  renderDirectory();
+  renderSettings();
+  renderSafetyAlerts();
+  renderResponderAlerts();
+  updateNav(null);
+  navRoot.style.display = 'none';
+  document.getElementById('homeLocationText').textContent =
+    `NMU Main Campus - Location sharing simulated`;
+
+  // Expose for debugging
+  window.__guardian = state;
 })();
 </script>
 </body>
