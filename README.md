@@ -16,6 +16,18 @@ python -m http.server 4173
 
 Then open `http://localhost:4173/`.
 
+## Install as an app
+
+Vigil is now configured as an installable Progressive Web App. To test the app install flow locally, serve the folder over HTTP instead of opening the file directly:
+
+```powershell
+python -m http.server 4173
+```
+
+Open `http://localhost:4173/`, then use the browser install prompt or the `Install app` button on the landing screen when it appears. The service worker caches the app shell so the UI can reopen offline; SQL/API features still need the local API and database to be running.
+
+On Android or desktop Chrome/Edge, use the browser's install option. On iPhone, open the page in Safari and use Share > Add to Home Screen.
+
 ## Running the API
 
 Prerequisites:

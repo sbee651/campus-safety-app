@@ -3,11 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#101a4d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vigil">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="vigil-icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="vigil-icon-512.png">
 <title>Vigil - NMU Campus Safety</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23101a4d'/%3E%3Cpath d='M32 10l18 7v13c0 13-8 21-18 25-10-4-18-12-18-25V17l18-7z' fill='%23f4de4e'/%3E%3Cpath d='M32 20v18M23 29h18' stroke='%23101a4d' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -151,6 +154,13 @@
     border-radius:var(--radius-md);padding:15px;font-weight:700;font-size:14.5px;
     font-family:var(--font-body);cursor:pointer;
   }
+  .install-btn{
+    display:none;width:100%;border:1px solid rgba(244,222,78,.5);
+    background:rgba(244,222,78,.12);color:var(--yellow);
+    border-radius:var(--radius-md);padding:15px;font-weight:800;font-size:14.5px;
+    font-family:var(--font-body);cursor:pointer;
+  }
+  .install-btn.ready{display:block;}
   .auth-switch{margin-top:22px;font-size:12.5px;color:var(--muted);}
   .auth-switch button{
     background:none;border:none;color:var(--yellow);font-weight:700;
@@ -650,6 +660,7 @@
             <div class="landing-actions">
               <button class="landing-btn-primary" data-goto="signin">Sign in</button>
               <button class="landing-btn-secondary" data-goto="signup">Create an account</button>
+              <button class="install-btn" id="installAppBtn" type="button">Install app</button>
             </div>
           </div>
         </section>
@@ -1562,6 +1573,51 @@
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  let deferredInstallPrompt = null;
+  const installAppBtn = document.getElementById('installAppBtn');
+
+  function isStandaloneApp(){
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+
+  function updateInstallButton(){
+    if (!installAppBtn) return;
+    installAppBtn.classList.toggle('ready', Boolean(deferredInstallPrompt) && !isStandaloneApp());
+  }
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    updateInstallButton();
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    updateInstallButton();
+    showToast('Vigil was installed on this device.');
+  });
+
+  if (installAppBtn){
+    installAppBtn.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) {
+        showToast('Use your browser menu to add Vigil to your home screen.');
+        return;
+      }
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      updateInstallButton();
+    });
+  }
+
+  if ('serviceWorker' in navigator && ['http:', 'https:'].includes(window.location.protocol)){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {
+        // The app still runs normally if service worker registration is unavailable.
+      });
+    });
   }
 
   function getPatrolArea(areaName){

@@ -1,21 +1,46 @@
 {
-  "name": "Vigil — NMU Campus Safety",
+  "id": "./index.html",
+  "name": "Vigil - NMU Campus Safety",
   "short_name": "Vigil",
+  "description": "A campus safety companion prototype for Nelson Mandela University.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#101a4d",
   "theme_color": "#101a4d",
+  "categories": ["education", "utilities", "health"],
   "icons": [
     {
       "src": "vigil-icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "vigil-icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open Vigil",
+      "short_name": "Open",
+      "description": "Open the Vigil campus safety app.",
+      "url": "./index.html",
+      "icons": [{ "src": "vigil-icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Safe Walk",
+      "short_name": "Walk",
+      "description": "Open Vigil to start a Safe Walk.",
+      "url": "./index.html",
+      "icons": [{ "src": "vigil-icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }
