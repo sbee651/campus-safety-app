@@ -201,7 +201,7 @@ IF NOT EXISTS (SELECT 1 FROM dbo.Student WHERE Name = N'Demo Student')
 BEGIN
     INSERT INTO dbo.Student (Name, Email, StudentNumber, Programme, EmergencyPreference)
     VALUES (N'Demo Student', N'demo.student@mandela.ac.za', N'229180000', N'Computer Science', N'SMS');
-END;
+END
 ELSE
 BEGIN
     UPDATE dbo.Student
@@ -214,7 +214,7 @@ IF NOT EXISTS (SELECT 1 FROM dbo.Student WHERE Name = N'Jane Doe')
 BEGIN
     INSERT INTO dbo.Student (Name, Email, StudentNumber, Programme, EmergencyPreference)
     VALUES (N'Jane Doe', N'jane.doe@mandela.ac.za', N'229180001', N'Information Technology', N'Email');
-END;
+END
 ELSE
 BEGIN
     UPDATE dbo.Student
