@@ -78,7 +78,10 @@ Password note: the API stores bcrypt password hashes in `dbo.Student.PasswordHas
 
 During signup, students choose their residential area. Vigil maps that area to ATLAS Security and/or CityWide Security coverage using the supplied Port Elizabeth area lists. If both providers cover the selected area, the student must choose one explicitly. The selected provider is added as an official, non-removable patrol contact.
 
-Official patrol contact numbers and email addresses still need final operational verification. Until confirmed, the prototype routes patrol contact phone links through NMU Protection Services general support (`+27 41 504 1111`) instead of inventing private staff numbers.
+Configured patrol contact details:
+
+- ATLAS Security: `0861 585 585`, `info@atlas24.co.za`
+- CityWide Security: `041 072 084`, `tech@citywide.co.za`
 
 ## Known limitations and simulated features
 

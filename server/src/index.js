@@ -25,16 +25,16 @@ const PATROL_CONTACTS = {
   atlas: {
     id: 'atlas',
     name: 'ATLAS Security',
-    phone: '+27 41 504 1111',
-    email: process.env.ATLAS_SECURITY_EMAIL || process.env.CAMPUS_SECURITY_EMAIL || null,
-    note: 'Coverage area confirmed; route through Protection Services until official patrol hotline is verified.'
+    phone: process.env.ATLAS_SECURITY_PHONE || '0861 585 585',
+    email: process.env.ATLAS_SECURITY_EMAIL || 'info@atlas24.co.za',
+    note: 'Official patrol contact details loaded for this coverage area.'
   },
   citywide: {
     id: 'citywide',
     name: 'CityWide Security',
-    phone: '+27 41 504 1111',
-    email: process.env.CITYWIDE_SECURITY_EMAIL || process.env.CAMPUS_SECURITY_EMAIL || null,
-    note: 'Coverage area confirmed; route through Protection Services until official patrol hotline is verified.'
+    phone: process.env.CITYWIDE_SECURITY_PHONE || '041 072 084',
+    email: process.env.CITYWIDE_SECURITY_EMAIL || 'tech@citywide.co.za',
+    note: 'Official patrol contact details loaded for this coverage area.'
   }
 };
 
