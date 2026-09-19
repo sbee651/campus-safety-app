@@ -53,6 +53,7 @@ Configure `server/.env` as needed:
 - `DB_TRUSTED_CONNECTION=true` for Windows trusted auth / LocalDB.
 - Or set `DB_USER`, `DB_PASSWORD`, `DB_SERVER`, `DB_DATABASE`, and optional `DB_PORT` for a full SQL Server instance.
 - Optional Resend email delivery: set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `API_PUBLIC_BASE_URL`, and any patrol/security email recipients.
+- Optional Gmail Safe Walk delivery: set `GMAIL_USER` and `GMAIL_APP_PASSWORD`. Use a Gmail App Password from Google Account > Security > 2-Step Verification > App passwords; do not use or commit a normal Gmail password.
 
 Quick checks:
 
@@ -75,9 +76,11 @@ The API exposes:
 - `GET /api/patrol-coverage`
 - `POST /api/signup`
 - `POST /api/signin`
+- `POST /api/contacts`
 - `POST /api/forgot-password`
 - `POST /api/reset-password`
 - `POST /api/notify-emergency`
+- `POST /api/safewalk/notify`
 - `POST /api/alerts/:id/status`
 - `GET /api/analytics/summary`
 
@@ -85,7 +88,7 @@ Password note: the API stores bcrypt password hashes in `dbo.Student.PasswordHas
 
 ## Data model note
 
-`SQLQuery1.sql` is the SQL Server data model for the prototype. The signup/signin/reset path can now use the Express API to create and read `dbo.Student` rows, record accepted terms, store password hashes, and create an official `security-patrol` trusted contact when SQL Server is reachable. The API also returns short-lived in-memory auth tokens after signup, signin, and password reset. Emergency notification, alert-status, password reset, and analytics endpoints exist for demo integration, but most live response workflows are still simulated by the browser UI.
+`SQLQuery1.sql` is the SQL Server data model for the prototype. The signup/signin/reset path can now use the Express API to create and read `dbo.Student` rows, record accepted terms, store password hashes, and create an official `security-patrol` trusted contact when SQL Server is reachable. Students can also save trusted contacts to `dbo.TrustedContact` through `POST /api/contacts`, including guardian email addresses. The API returns short-lived in-memory auth tokens after signup, signin, and password reset. Safe Walk guardian email can be sent through Gmail SMTP when SQL Server and `GMAIL_USER` / `GMAIL_APP_PASSWORD` are configured; otherwise the browser keeps the Safe Walk simulation running and shows an offline/failure note.
 
 ## Security patrol assignment
 
@@ -99,7 +102,7 @@ Configured patrol contact details:
 ## Known limitations and simulated features
 
 - Authentication is now backed by SQL Server and bcrypt for the signup/signin/reset demo slice, with short-lived in-memory API tokens. There are still no production JWTs, MFA, persistent sessions, or account lockout policy.
-- SOS dispatch, trusted-contact notifications, responder acknowledgements, report submission, Safe Walk location, and analytics are still demo workflows unless the local API/email/database stack is configured and reachable.
+- SOS dispatch, responder acknowledgements, report submission, Safe Walk location, and analytics are still demo workflows unless the local API/email/database stack is configured and reachable. Trusted contacts and Safe Walk guardian email notifications can persist/send through the API when SQL Server and Gmail SMTP are configured, and fall back to local simulation when they are not.
 - Silent duress is a long-press SOS prototype path with pointer, touch, and mouse support. It reuses the normal SOS notification flow and marks the alert as silent in the UI, but it is not connected to a production dispatch center.
 - Language preference currently cycles the UI setting between English, isiXhosa, and Afrikaans; full app translation is not implemented.
 - Safe Walk location uses sample NMU campus zones with simulated movement, not live device GPS.

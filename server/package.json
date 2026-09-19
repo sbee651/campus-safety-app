@@ -22,6 +22,7 @@
     "express-rate-limit": "^8.7.0",
     "msnodesqlv8": "^5.5.0",
     "mssql": "^11.0.1",
+    "nodemailer": "^10.0.10",
     "resend": "^6.28.1"
   }
 }

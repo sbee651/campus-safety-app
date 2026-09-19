@@ -889,6 +889,7 @@
               <span>Vigil stream active</span>
               <span class="live-tag">LIVE</span>
             </div>
+            <div class="auth-note" id="walkNotifyNote" role="status" aria-live="polite"></div>
 
             <button class="btn-mint" id="arrivedSafeBtn"><span data-icon="check"></span> I've arrived safely</button>
             <button class="btn-coral-outline" id="emergencyTypeBtn"><span data-icon="alert"></span> Emergency!</button>
@@ -1111,6 +1112,11 @@
               <label>Phone number</label>
               <input type="tel" id="newGuardianPhone" placeholder="+27 82 123 4567">
               <div class="field-error" id="newGuardianPhoneError"></div>
+            </div>
+            <div class="field">
+              <label>Email address</label>
+              <input type="email" id="newGuardianEmail" placeholder="guardian@example.com">
+              <div class="field-error" id="newGuardianEmailError"></div>
             </div>
             <div class="field">
               <label>Relationship</label>
@@ -1416,6 +1422,10 @@
     return /^[^\s@]+@mandela\.ac\.za$/i.test(value);
   }
 
+  function isEmail(value){
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  }
+
   function isNineDigitStudentNo(value){
     return /^\d{9}$/.test(value);
   }
@@ -1525,11 +1535,14 @@
   async function callApi(path, payload){
     await ensureApiAvailability();
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3000);
+    const timeoutMs = path === '/api/safewalk/notify' ? 10000 : 3000;
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const headers = { 'Content-Type': 'application/json' };
+    if (state.authToken) headers.Authorization = `Bearer ${state.authToken}`;
     try {
       const response = await fetch(`${API_BASE_URL}${path}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payload),
         signal: controller.signal
       });
@@ -1555,8 +1568,10 @@
     await ensureApiAvailability();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3000);
+    const headers = {};
+    if (state.authToken) headers.Authorization = `Bearer ${state.authToken}`;
     try {
-      const response = await fetch(`${API_BASE_URL}${path}`, { signal: controller.signal });
+      const response = await fetch(`${API_BASE_URL}${path}`, { headers, signal: controller.signal });
       let data = {};
       try {
         data = await response.json();
@@ -2042,14 +2057,52 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
     sel.value = state.currentZone || state.campusZones[0].id;
   }
 
+  async function notifySafeWalkStart(zone, startedAt){
+    setAuthNote('walkNotifyNote', 'Sending guardian email notification...');
+    try {
+      const result = await callApi('/api/safewalk/notify', {
+        zone: zone.name,
+        startedAt
+      });
+      const sentCount = Number(result.sentCount) || 0;
+      const failedCount = Number(result.failedCount) || 0;
+      if (sentCount > 0 && failedCount > 0) {
+        setAuthNote('walkNotifyNote', `Email sent to ${sentCount} guardian${sentCount === 1 ? '' : 's'}; ${failedCount} failed.`);
+      } else if (sentCount > 0) {
+        setAuthNote('walkNotifyNote', `Email sent to ${sentCount} guardian${sentCount === 1 ? '' : 's'}.`);
+      } else {
+        setAuthNote('walkNotifyNote', result.message || 'No guardian email addresses are saved for this account.');
+      }
+    } catch (error) {
+      setAuthNote('walkNotifyNote', 'Guardian emails could not be sent. Safe Walk continues in simulated mode.');
+    }
+  }
+
   function startWalkTracking(){
     const status = document.getElementById('locationStatus');
     const map = ensureMap();
     populateZoneSelect();
+    const zoneId = document.getElementById('walkZoneSelect').value || state.currentZone;
+
+    // If already running, don't restart
+    if (state.locationWatcher !== null) return;
+
+    const zone = getZone(zoneId);
+    const startedAt = new Date().toISOString();
+    state.currentWalk = {
+      zoneId,
+      startedAt,
+      status: 'active',
+      notified: false
+    };
+    notifySafeWalkStart(zone, startedAt).finally(() => {
+      if (state.currentWalk && state.currentWalk.startedAt === startedAt) {
+        state.currentWalk.notified = true;
+      }
+    });
+
     if (!map){
       status.textContent = 'Map unavailable - simulated location still active';
-      if (state.locationWatcher !== null) return;
-      const zoneId = document.getElementById('walkZoneSelect').value || state.currentZone;
       state.locationWatcher = startSimulatedLocation(zoneId, ({ acc, zone }) => {
         status.textContent = `Simulated - ${zone.name} - accuracy ${acc}m`;
         document.getElementById('walkDistance').textContent = '0.6 km';
@@ -2057,20 +2110,6 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
       });
       return;
     }
-
-    // If already running, don't restart
-    if (state.locationWatcher !== null) return;
-
-    const zoneId = document.getElementById('walkZoneSelect').value || state.currentZone;
-    state.currentWalk = {
-      zoneId,
-      startedAt: new Date().toISOString(),
-      status: 'active',
-      notified: false
-    };
-    const zone = getZone(zoneId);
-    notifyEmergency('safe-walk-start', `Safe Walk started near ${zone.name} (simulated)`);
-    state.currentWalk.notified = true;
 
     state.locationWatcher = startSimulatedLocation(zoneId, ({ lat, lng, acc, zone }) => {
       status.textContent = `Simulated - ${zone.name} - accuracy ${acc}m`;
@@ -2403,6 +2442,10 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
   
   const guardianModal = document.getElementById('guardianModal');
 
+  function guardianEmailText(guardian){
+    return guardian.email ? ` - ${guardian.email}` : '';
+  }
+
   function renderGuardians(){
     const list = document.getElementById('guardianList');
     list.innerHTML = '';
@@ -2423,7 +2466,7 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
           <span class="avatar-circ">${g.initials || g.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()}</span>
           <div>
             <strong>${g.name}${badge}</strong>
-            <span class="tag">${g.relation} - ${g.phone}</span>
+            <span class="tag">${g.relation} - ${g.phone}${guardianEmailText(g)}</span>
           </div>
           ${removeButton}
         `;
@@ -2448,7 +2491,11 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
   document.getElementById('addGuardianBtn').addEventListener('click', () => {
     document.getElementById('newGuardianName').value = '';
     document.getElementById('newGuardianPhone').value = '';
+    document.getElementById('newGuardianEmail').value = '';
     document.getElementById('newGuardianRelation').value = '';
+    clearFieldError('newGuardianName');
+    clearFieldError('newGuardianPhone');
+    clearFieldError('newGuardianEmail');
     guardianModal.classList.add('active');
   });
 
@@ -2456,17 +2503,25 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
     guardianModal.classList.remove('active');
   });
 
-  document.getElementById('saveGuardianBtn').addEventListener('click', () => {
+  document.getElementById('saveGuardianBtn').addEventListener('click', async () => {
     const name = document.getElementById('newGuardianName').value.trim();
     const phone = document.getElementById('newGuardianPhone').value.trim();
+    const email = document.getElementById('newGuardianEmail').value.trim();
     const relation = document.getElementById('newGuardianRelation').value.trim() || 'Contact';
+    const btn = document.getElementById('saveGuardianBtn');
+    const originalText = btn.textContent;
 
     clearFieldError('newGuardianName');
     clearFieldError('newGuardianPhone');
+    clearFieldError('newGuardianEmail');
     let valid = true;
     if (!name || !phone){
       if (!name) setFieldError('newGuardianName', 'Enter a contact name.');
       if (!phone) setFieldError('newGuardianPhone', 'Enter a phone number.');
+      valid = false;
+    }
+    if (email && !isEmail(email)){
+      setFieldError('newGuardianEmail', 'Enter a valid email address.');
       valid = false;
     }
     if (!valid) return;
@@ -2475,15 +2530,44 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
       id: Date.now(),
       name,
       phone,
+      email,
       relation,
       verified: false,
       initials: name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()
     };
-    state.guardians.push(newGuardian);
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+      const result = await callApi('/api/contacts', {
+        name,
+        phone,
+        email,
+        relation,
+        preferredAlertMethod: email ? 'Email' : 'SMS'
+      });
+      state.guardians.push(Object.assign(newGuardian, result.contact || {}));
+      showToast(email ? 'Contact saved to SQL with email.' : 'Contact saved to SQL.');
+    } catch (error) {
+      state.guardians.push(newGuardian);
+      if (shouldUseOfflineFallback(error) || error.status === 401) {
+        showToast('Contact saved locally. API contact sync is unavailable.');
+      } else if (error.data && error.data.errors) {
+        state.guardians = state.guardians.filter(g => g.id !== newGuardian.id);
+        if (error.data.errors.name) setFieldError('newGuardianName', error.data.errors.name);
+        if (error.data.errors.phone) setFieldError('newGuardianPhone', error.data.errors.phone);
+        if (error.data.errors.email) setFieldError('newGuardianEmail', error.data.errors.email);
+        return;
+      } else {
+        showToast('Contact saved locally. SQL sync failed.');
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
     saveState();
     guardianModal.classList.remove('active');
     renderGuardians();
-    showToast('Verification request simulated.');
   });
 
   // REPORT

@@ -89,4 +89,18 @@ $notify = Invoke-Json -Method POST -Path "/api/notify-emergency" -Body @{
 }
 Assert-True ($notify.Body.sent -eq $false) "Empty recipients should be a clean sent:false no-op."
 
+$unauthContact = Invoke-Json -Method POST -Path "/api/contacts" -AllowedStatus @(401) -Body @{
+  name = "Guardian"
+  phone = "+27 82 000 0000"
+  email = "guardian@example.com"
+  relation = "Friend"
+}
+Assert-True ($null -ne $unauthContact.Body.error) "Contacts endpoint must require a signed-in student."
+
+$unauthSafeWalk = Invoke-Json -Method POST -Path "/api/safewalk/notify" -AllowedStatus @(401) -Body @{
+  zone = "Library Walkway"
+  startedAt = (Get-Date).ToString("o")
+}
+Assert-True ($null -ne $unauthSafeWalk.Body.error) "Safe Walk notify endpoint must require a signed-in student."
+
 Write-Host "API contract smoke tests passed."

@@ -6,6 +6,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = require('express-rate-limit');
 const path = require('path');
+const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
 const { inspect } = require('util');
 const crypto = require('crypto');
@@ -115,6 +116,7 @@ const AREA_COVERAGE = [
 
 const areaByName = new Map(AREA_COVERAGE.map((entry) => [entry.area.toLowerCase(), entry]));
 const isMandelaEmail = (value) => /^[^\s@]+@mandela\.ac\.za$/i.test(String(value || '').trim());
+const isEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 const isNineDigitStudentNo = (value) => /^\d{9}$/.test(String(value || '').trim());
 const isStrongEnoughPassword = (value) => String(value || '').length >= 8;
 
@@ -156,6 +158,27 @@ const createSession = (studentId) => {
     expiresAt: Date.now() + 8 * 60 * 60 * 1000
   });
   return token;
+};
+
+const getSessionFromRequest = (req) => {
+  const header = String(req.headers.authorization || '');
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : String(req.body?.authToken || '').trim();
+  if (!token) return null;
+  const session = sessions.get(token);
+  if (!session || session.expiresAt < Date.now()) {
+    sessions.delete(token);
+    return null;
+  }
+  return session;
+};
+
+const requireSession = (req, res, next) => {
+  const session = getSessionFromRequest(req);
+  if (!session) {
+    return res.status(401).json({ ok: false, error: 'Sign in again to continue.' });
+  }
+  req.session = session;
+  next();
 };
 
 const errorDetail = (error) => {
@@ -206,6 +229,24 @@ async function sendEmail({ to, subject, html, text }) {
     text
   });
   return { sent: true, id: response.data?.id || response.id || null };
+}
+
+let gmailTransporter;
+
+function getGmailTransporter() {
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    return null;
+  }
+  if (!gmailTransporter) {
+    gmailTransporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD
+      }
+    });
+  }
+  return gmailTransporter;
 }
 
 app.get('/api/health', (req, res) => {
@@ -384,6 +425,77 @@ app.post('/api/signin', authLimiter, async (req, res) => {
   }
 });
 
+app.post('/api/contacts', requireSession, async (req, res) => {
+  const { id, name, phone, email, relation, preferredAlertMethod } = req.body || {};
+  const errors = {};
+  const cleanName = String(name || '').trim();
+  const cleanPhone = String(phone || '').trim();
+  const cleanEmail = String(email || '').trim();
+  const cleanRelation = String(relation || 'Contact').trim() || 'Contact';
+  const cleanMethod = String(preferredAlertMethod || (cleanEmail ? 'Email' : 'SMS')).trim() || 'SMS';
+
+  if (!cleanName) errors.name = 'Enter a contact name.';
+  if (!cleanPhone) errors.phone = 'Enter a phone number.';
+  if (cleanEmail && !isEmail(cleanEmail)) errors.email = 'Enter a valid email address.';
+
+  if (Object.keys(errors).length) {
+    return res.status(422).json({ ok: false, errors });
+  }
+
+  try {
+    const pool = await getPool();
+    let result;
+    const contactId = Number(id);
+
+    if (Number.isInteger(contactId) && contactId > 0) {
+      result = await pool.request()
+        .input('contactId', sql.Int, contactId)
+        .input('studentId', sql.Int, req.session.studentId)
+        .input('name', sql.NVarChar(100), cleanName)
+        .input('relationship', sql.NVarChar(50), cleanRelation)
+        .input('phone', sql.NVarChar(20), cleanPhone)
+        .input('email', sql.NVarChar(100), cleanEmail || null)
+        .input('method', sql.NVarChar(50), cleanMethod)
+        .query(`
+          UPDATE dbo.TrustedContact
+          SET Name = @name,
+              Relationship = @relationship,
+              Phone = @phone,
+              Email = @email,
+              PreferredAlertMethod = @method
+          OUTPUT inserted.ContactID, inserted.Name, inserted.Relationship, inserted.Phone, inserted.Email, inserted.PreferredAlertMethod, inserted.ContactType
+          WHERE ContactID = @contactId
+            AND StudentID = @studentId
+            AND ContactType = N'personal';
+        `);
+    }
+
+    if (!result || !result.recordset.length) {
+      result = await pool.request()
+        .input('studentId', sql.Int, req.session.studentId)
+        .input('name', sql.NVarChar(100), cleanName)
+        .input('relationship', sql.NVarChar(50), cleanRelation)
+        .input('phone', sql.NVarChar(20), cleanPhone)
+        .input('email', sql.NVarChar(100), cleanEmail || null)
+        .input('method', sql.NVarChar(50), cleanMethod)
+        .input('contactType', sql.NVarChar(30), 'personal')
+        .query(`
+          INSERT INTO dbo.TrustedContact (StudentID, Name, Relationship, Phone, Email, PreferredAlertMethod, ContactType)
+          OUTPUT inserted.ContactID, inserted.Name, inserted.Relationship, inserted.Phone, inserted.Email, inserted.PreferredAlertMethod, inserted.ContactType
+          VALUES (@studentId, @name, @relationship, @phone, @email, @method, @contactType);
+        `);
+    }
+
+    res.status(201).json({ ok: true, contact: publicContactFields(result.recordset[0]) });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: 'Contact save failed.',
+      detail: errorDetail(error)
+    });
+  }
+});
+
 app.post('/api/forgot-password', authLimiter, async (req, res) => {
   const { email } = req.body || {};
   if (!isMandelaEmail(email)) {
@@ -503,6 +615,115 @@ app.post('/api/notify-emergency', async (req, res) => {
       ok: false,
       error: 'Emergency notification failed.',
       detail: errorDetail(error)
+    });
+  }
+});
+
+app.post('/api/safewalk/notify', requireSession, async (req, res) => {
+  const { zone, startedAt } = req.body || {};
+  const cleanZone = String(zone || 'simulated campus route').trim();
+  const startedDate = startedAt ? new Date(startedAt) : new Date();
+  const startedLabel = Number.isNaN(startedDate.getTime()) ? new Date().toLocaleString() : startedDate.toLocaleString();
+  const transporter = getGmailTransporter();
+
+  if (!transporter) {
+    return res.status(503).json({
+      ok: false,
+      error: 'Gmail SMTP is not configured.',
+      sentCount: 0,
+      failed: [],
+      skipped: []
+    });
+  }
+
+  try {
+    const pool = await getPool();
+    const studentResult = await pool.request()
+      .input('studentId', sql.Int, req.session.studentId)
+      .query(`
+        SELECT TOP 1 StudentID, Name, Email, StudentNumber
+        FROM dbo.Student
+        WHERE StudentID = @studentId;
+      `);
+
+    if (!studentResult.recordset.length) {
+      return res.status(404).json({ ok: false, error: 'Student account was not found.' });
+    }
+
+    const student = studentResult.recordset[0];
+    const contactsResult = await pool.request()
+      .input('studentId', sql.Int, req.session.studentId)
+      .query(`
+        SELECT ContactID, Name, Email
+        FROM dbo.TrustedContact
+        WHERE StudentID = @studentId
+          AND Email IS NOT NULL
+          AND LTRIM(RTRIM(Email)) <> N''
+        ORDER BY ContactID;
+      `);
+
+    const contacts = contactsResult.recordset.filter((contact) => isEmail(contact.Email));
+    if (!contacts.length) {
+      return res.json({
+        ok: true,
+        sentCount: 0,
+        failed: [],
+        skipped: contactsResult.recordset.map((contact) => ({
+          contactId: contact.ContactID,
+          name: contact.Name,
+          reason: 'No valid email address on file.'
+        })),
+        message: 'No guardian email addresses are saved for this student.'
+      });
+    }
+
+    const results = await Promise.allSettled(contacts.map((contact) => transporter.sendMail({
+      from: `"Vigil Campus Safety" <${process.env.GMAIL_USER}>`,
+      to: contact.Email,
+      subject: 'Guardian Safe Walk started',
+      text: `${student.Name} (${student.StudentNumber || 'student number unavailable'}) started a Safe Walk at ${startedLabel}. Current simulated zone/location: ${cleanZone}.`,
+      html: `<p><strong>Guardian Safe Walk started</strong></p><p>${student.Name} (${student.StudentNumber || 'student number unavailable'}) started a Safe Walk.</p><p><strong>Start time:</strong> ${startedLabel}</p><p><strong>Simulated zone/location:</strong> ${cleanZone}</p>`
+    })));
+
+    const sent = [];
+    const failed = [];
+    results.forEach((result, index) => {
+      const contact = contacts[index];
+      if (result.status === 'fulfilled') {
+        sent.push({
+          contactId: contact.ContactID,
+          name: contact.Name,
+          email: contact.Email,
+          messageId: result.value.messageId || null
+        });
+      } else {
+        failed.push({
+          contactId: contact.ContactID,
+          name: contact.Name,
+          email: contact.Email,
+          error: errorDetail(result.reason)
+        });
+      }
+    });
+
+    const status = failed.length ? 207 : 200;
+    res.status(status).json({
+      ok: failed.length === 0,
+      sentCount: sent.length,
+      failedCount: failed.length,
+      sent,
+      failed,
+      message: failed.length
+        ? `Email sent to ${sent.length} guardian${sent.length === 1 ? '' : 's'}; ${failed.length} failed.`
+        : `Email sent to ${sent.length} guardian${sent.length === 1 ? '' : 's'}.`
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: 'Safe Walk notification failed.',
+      detail: errorDetail(error),
+      sentCount: 0,
+      failed: []
     });
   }
 });
