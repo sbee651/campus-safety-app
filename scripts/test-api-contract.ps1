@@ -97,6 +97,9 @@ $unauthContact = Invoke-Json -Method POST -Path "/api/contacts" -AllowedStatus @
 }
 Assert-True ($null -ne $unauthContact.Body.error) "Contacts endpoint must require a signed-in student."
 
+$unauthContactList = Invoke-Json -Path "/api/contacts" -AllowedStatus @(401)
+Assert-True ($null -ne $unauthContactList.Body.error) "Contacts list endpoint must require a signed-in student."
+
 $unauthSafeWalk = Invoke-Json -Method POST -Path "/api/safewalk/notify" -AllowedStatus @(401) -Body @{
   zone = "Library Walkway"
   startedAt = (Get-Date).ToString("o")

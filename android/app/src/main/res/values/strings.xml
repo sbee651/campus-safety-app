@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Vigil</string>
+    <string name="title_activity_main">Vigil</string>
+    <string name="package_name">za.ac.mandela.vigil</string>
+    <string name="custom_url_scheme">za.ac.mandela.vigil</string>
+</resources>

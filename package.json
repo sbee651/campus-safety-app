@@ -1,0 +1,16 @@
+{
+  "name": "vigil-campus-safety-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Native app wrapper for the Vigil NMU campus safety prototype.",
+  "scripts": {
+    "build:mobile": "node scripts/build-mobile.js",
+    "cap:sync": "npm run build:mobile && npx cap sync",
+    "cap:open:android": "npm run cap:sync && npx cap open android"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/cli": "^7.4.3",
+    "@capacitor/core": "^7.4.3"
+  }
+}

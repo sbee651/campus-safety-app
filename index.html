@@ -783,6 +783,7 @@
         <section class="screen on-navy" data-screen="home">
           <div class="screen-body">
             <div class="prototype-badge">Hackathon prototype - all emergency actions are simulated</div>
+            <div class="auth-note" id="offlineDemoBanner" role="status" aria-live="polite"></div>
             <div class="status-pill">
               <span class="status-dot"></span>
               <div>
@@ -1226,7 +1227,8 @@
     walkInterval: null,
     checkinTimer: null,
     sosLocationInterval: null,
-    sosStartTime: null
+    sosStartTime: null,
+    offlineMode: false
   };
 
   const STATUS_CYCLE = ['New', 'Acknowledged', 'ResponderDispatched', 'Resolved'];
@@ -1672,12 +1674,12 @@
     if (fallback && fallback.email) state.user.email = fallback.email;
     if (fallback && fallback.area) state.user.area = fallback.area;
     if (fallback && fallback.patrolProvider) state.user.patrolProvider = fallback.patrolProvider;
-    if (Array.isArray(contacts) && contacts.length){
-      contacts.forEach(contact => {
-        if (contact && contact.contactType === 'security-patrol') {
-          setOfficialPatrolContact(contact);
-        }
-      });
+    if (Array.isArray(contacts)){
+      state.guardians = contacts.map(contact => Object.assign({
+        verified: true,
+        initials: contact.name ? contact.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() : 'GC'
+      }, contact));
+      saveState();
     }
     renderSettings();
   }
@@ -1685,11 +1687,12 @@
   function applyAuthToken(token){
     if (!token) return;
     state.authToken = token;
+    state.offlineMode = false;
     saveState();
   }
 
   function shouldUseOfflineFallback(error){
-    return !error.status || error.status >= 500 || error.name === 'AbortError';
+    return !error.status || error.name === 'AbortError';
   }
 
   async function notifyEmergency(emergencyType, location){
@@ -1730,6 +1733,7 @@
       localStorage.setItem('vigil_state', JSON.stringify({
         user: state.user,
         authToken: state.authToken,
+        offlineMode: state.offlineMode,
         guardians: state.guardians,
         settings: state.settings,
         reports: state.reports
@@ -1744,6 +1748,7 @@
       if (!parsed || typeof parsed !== 'object') return;
       if (parsed.user && typeof parsed.user === 'object') state.user = Object.assign(state.user, parsed.user);
       if (typeof parsed.authToken === 'string') state.authToken = parsed.authToken;
+      if (typeof parsed.offlineMode === 'boolean') state.offlineMode = parsed.offlineMode;
       if (Array.isArray(parsed.guardians)) state.guardians = parsed.guardians;
       if (parsed.settings && typeof parsed.settings === 'object') state.settings = Object.assign(state.settings, parsed.settings);
       if (Array.isArray(parsed.reports)) state.reports = parsed.reports;
@@ -1752,6 +1757,10 @@
 
   
   // SCREEN NAVIGATION
+  function updateOfflineBanner(){
+    setAuthNote('offlineDemoBanner', state.offlineMode ? 'Offline demo mode: this session is not authenticated against SQL Server.' : '');
+  }
+
   function closeModals(){
     document.querySelectorAll('.modal-overlay.active').forEach(modal => modal.classList.remove('active'));
   }
@@ -1768,6 +1777,7 @@
 
     const hideNav = ['landing','signin','signup','reset'].includes(name);
     navRoot.style.display = hideNav ? 'none' : 'flex';
+    if (name === 'home') updateOfflineBanner();
 
     if (name === 'safewalk') {
       setTimeout(() => {
@@ -2550,8 +2560,12 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
       showToast(email ? 'Contact saved to SQL with email.' : 'Contact saved to SQL.');
     } catch (error) {
       state.guardians.push(newGuardian);
-      if (shouldUseOfflineFallback(error) || error.status === 401) {
+      if (shouldUseOfflineFallback(error)) {
         showToast('Contact saved locally. API contact sync is unavailable.');
+      } else if (error.status === 401) {
+        state.guardians = state.guardians.filter(g => g.id !== newGuardian.id);
+        showToast('Sign in again before saving contacts to SQL.');
+        return;
       } else if (error.data && error.data.errors) {
         state.guardians = state.guardians.filter(g => g.id !== newGuardian.id);
         if (error.data.errors.name) setFieldError('newGuardianName', error.data.errors.name);
@@ -2912,13 +2926,22 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
 
     try {
       const result = await callApi('/api/signin', { email, password });
-      applyStudentRecord(result.student, null, result.contacts);
       applyAuthToken(result.authToken);
+      let contacts = result.contacts || [];
+      try {
+        const contactResult = await getApi('/api/contacts');
+        contacts = contactResult.contacts || contacts;
+      } catch (contactError) {
+        setAuthNote('signinAuthNote', 'Signed in. Saved contacts could not be refreshed, so cached contacts are shown.');
+      }
+      applyStudentRecord(result.student, null, contacts);
       show('home');
     } catch(error) {
       if (shouldUseOfflineFallback(error)) {
-        setAuthNote('signinAuthNote', 'API or database unavailable. Continuing in offline demo mode with local browser state.');
+        state.offlineMode = true;
+        setAuthNote('signinAuthNote', 'Offline demo mode: API unreachable, so this is not a real login.');
         applyStudentRecord(null, { name: state.user.name, studentNo: state.user.studentNo });
+        saveState();
         show('home');
       } else if (error.status === 401 || error.status === 404) {
         setFieldError('signinEmail', 'Invalid email or password.');

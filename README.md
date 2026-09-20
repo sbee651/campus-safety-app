@@ -2,7 +2,7 @@
 
 Vigil is a hackathon prototype for Nelson Mandela University campus safety. It demonstrates student sign-in, terms acceptance, area-based security patrol assignment, SOS escalation, silent duress, Safe Walk route sharing, trusted contacts, campus alerts, incident reporting, a responder dashboard, privacy notes, language preference, and a safety directory.
 
-The front end is intentionally small: one `index.html` file with inline CSS and vanilla JavaScript. A thin Node/Express API in `server/` connects the signup/signin path to SQL Server when available. If the API or database is unavailable, the front end falls back to local demo state and shows an inline offline-mode note.
+The front end is intentionally small: one `index.html` file with inline CSS and vanilla JavaScript. A thin Node/Express API in `server/` connects signup/signin, saved guardians, and Safe Walk email notification paths to SQL Server when available. If the API itself is unreachable, the front end can enter clearly labelled offline demo mode; invalid credentials from a reachable API are rejected and do not fall back to demo login.
 
 ## How to run
 
@@ -27,6 +27,36 @@ python -m http.server 4173
 Open `http://localhost:4173/`, then use the browser install prompt or the `Install app` button on the landing screen when it appears. The service worker caches the app shell so the UI can reopen offline; SQL/API features still need the local API and database to be running.
 
 On Android or desktop Chrome/Edge, use the browser's install option. On iPhone, open the page in Safari and use Share > Add to Home Screen.
+
+## Build as a native Android app
+
+The repo also includes a Capacitor Android wrapper, so the same Vigil interface can be packaged as a native Android APK instead of only running in the browser.
+
+Prerequisites:
+
+- Node.js 18 or newer.
+- Android Studio with the Android SDK.
+- A JDK configured through `JAVA_HOME`.
+
+Build/sync the native project:
+
+```powershell
+npm install
+npm run cap:sync
+```
+
+Open the Android project:
+
+```powershell
+npm run cap:open:android
+```
+
+Or build a debug APK after Java and Android SDK are configured:
+
+```powershell
+cd android
+.\gradlew.bat assembleDebug
+```
 
 ## Running the API
 
@@ -76,6 +106,7 @@ The API exposes:
 - `GET /api/patrol-coverage`
 - `POST /api/signup`
 - `POST /api/signin`
+- `GET /api/contacts`
 - `POST /api/contacts`
 - `POST /api/forgot-password`
 - `POST /api/reset-password`
@@ -84,7 +115,12 @@ The API exposes:
 - `POST /api/alerts/:id/status`
 - `GET /api/analytics/summary`
 
-Password note: the API stores bcrypt password hashes in `dbo.Student.PasswordHash`. It never stores plaintext passwords. Seed students in `SQLQuery1.sql` intentionally have no password hash and must use the reset-password flow before real API sign-in. If Resend is not configured and `DEMO_MODE=true`, the API returns a short-lived demo reset token so the reset screen can still be judged locally.
+Password note: the API stores bcrypt password hashes in `dbo.Student.PasswordHash`. It never stores plaintext passwords. If Resend is not configured and `DEMO_MODE=true`, the API returns a short-lived demo reset token so the reset screen can still be judged locally.
+
+Seeded test accounts from `SQLQuery1.sql`:
+
+- Demo Student: `demo.student@mandela.ac.za` / `DemoPass123`
+- Jane Doe: `jane.doe@mandela.ac.za` / `JanePass123`
 
 ## Data model note
 
@@ -101,7 +137,7 @@ Configured patrol contact details:
 
 ## Known limitations and simulated features
 
-- Authentication is now backed by SQL Server and bcrypt for the signup/signin/reset demo slice, with short-lived in-memory API tokens. There are still no production JWTs, MFA, persistent sessions, or account lockout policy.
+- Authentication is now backed by SQL Server and bcrypt for the signup/signin/reset demo slice, with short-lived in-memory API tokens. Wrong passwords and nonexistent student emails are rejected by the API and do not enter offline demo mode. There are still no production JWTs, MFA, persistent sessions, or account lockout policy.
 - SOS dispatch, responder acknowledgements, report submission, Safe Walk location, and analytics are still demo workflows unless the local API/email/database stack is configured and reachable. Trusted contacts and Safe Walk guardian email notifications can persist/send through the API when SQL Server and Gmail SMTP are configured, and fall back to local simulation when they are not.
 - Silent duress is a long-press SOS prototype path with pointer, touch, and mouse support. It reuses the normal SOS notification flow and marks the alert as silent in the UI, but it is not connected to a production dispatch center.
 - Language preference currently cycles the UI setting between English, isiXhosa, and Afrikaans; full app translation is not implemented.

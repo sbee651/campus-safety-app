@@ -241,26 +241,28 @@ GO
 IF NOT EXISTS (SELECT 1 FROM dbo.Student WHERE Name = N'Demo Student')
 BEGIN
     INSERT INTO dbo.Student (Name, Email, StudentNumber, PasswordHash, TermsAcceptedAt, Programme, EmergencyPreference)
-    VALUES (N'Demo Student', N'demo.student@mandela.ac.za', N'229180000', NULL, GETDATE(), N'Computer Science', N'SMS');
+    VALUES (N'Demo Student', N'demo.student@mandela.ac.za', N'229180000', N'$2b$12$D3lRnrphYsHuc4fdISQLoOX8fQcm/hlfjIBnmc0w3ZNCYFDl/ee3S', GETDATE(), N'Computer Science', N'SMS');
 END
 ELSE
 BEGIN
     UPDATE dbo.Student
     SET Email = N'demo.student@mandela.ac.za',
-        StudentNumber = N'229180000'
+        StudentNumber = N'229180000',
+        PasswordHash = COALESCE(PasswordHash, N'$2b$12$D3lRnrphYsHuc4fdISQLoOX8fQcm/hlfjIBnmc0w3ZNCYFDl/ee3S')
     WHERE Name = N'Demo Student';
 END;
 
 IF NOT EXISTS (SELECT 1 FROM dbo.Student WHERE Name = N'Jane Doe')
 BEGIN
     INSERT INTO dbo.Student (Name, Email, StudentNumber, PasswordHash, TermsAcceptedAt, Programme, EmergencyPreference)
-    VALUES (N'Jane Doe', N'jane.doe@mandela.ac.za', N'229180001', NULL, GETDATE(), N'Information Technology', N'Email');
+    VALUES (N'Jane Doe', N'jane.doe@mandela.ac.za', N'229180001', N'$2b$12$iXmF3fOE/Pt.8z6kvG8hKOj3dx//qSt7qG8X9gp9G8nuoK/JuvqcK', GETDATE(), N'Information Technology', N'Email');
 END
 ELSE
 BEGIN
     UPDATE dbo.Student
     SET Email = N'jane.doe@mandela.ac.za',
-        StudentNumber = N'229180001'
+        StudentNumber = N'229180001',
+        PasswordHash = COALESCE(PasswordHash, N'$2b$12$iXmF3fOE/Pt.8z6kvG8hKOj3dx//qSt7qG8X9gp9G8nuoK/JuvqcK')
     WHERE Name = N'Jane Doe';
 END;
 

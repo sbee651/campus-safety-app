@@ -392,7 +392,7 @@ app.post('/api/signin', authLimiter, async (req, res) => {
 
     const row = result.recordset[0];
     if (!row.PasswordHash) {
-      return res.status(401).json({ ok: false, error: 'This account must reset its password before signing in.' });
+      return res.status(401).json({ ok: false, error: 'Invalid email or password.' });
     }
 
     const passwordMatches = await bcrypt.compare(String(password), row.PasswordHash);
@@ -420,6 +420,28 @@ app.post('/api/signin', authLimiter, async (req, res) => {
     res.status(500).json({
       ok: false,
       error: 'Signin failed.',
+      detail: errorDetail(error)
+    });
+  }
+});
+
+app.get('/api/contacts', requireSession, async (req, res) => {
+  try {
+    const pool = await getPool();
+    const contacts = await pool.request()
+      .input('studentId', sql.Int, req.session.studentId)
+      .query(`
+        SELECT ContactID, Name, Relationship, Phone, Email, PreferredAlertMethod, ContactType
+        FROM dbo.TrustedContact
+        WHERE StudentID = @studentId
+        ORDER BY CASE WHEN ContactType = N'security-patrol' THEN 0 ELSE 1 END, ContactID;
+      `);
+
+    res.json({ ok: true, contacts: contacts.recordset.map(publicContactFields) });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: 'Contact load failed.',
       detail: errorDetail(error)
     });
   }
