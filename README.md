@@ -76,6 +76,8 @@ npm start
 
 The API runs on `http://localhost:3000` by default. `index.html` calls that hardcoded localhost URL for the hackathon demo. When the page is hosted over HTTPS, browser mixed-content rules can block calls to this local HTTP API. For the connected demo path, open `index.html` directly or serve it locally over HTTP.
 
+When testing from a phone, `localhost` means the phone itself, not the laptop running the API. Serve the app over your laptop's LAN IP, for example `http://192.168.1.10:4173/`; the frontend will then try `http://192.168.1.10:3000` for the API. You can also force the API URL once with `?api=http://192.168.1.10:3000`.
+
 Configure `server/.env` as needed:
 
 - `DB_SERVER=(localdb)\MSSQLLocalDB`

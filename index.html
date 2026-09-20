@@ -1438,7 +1438,25 @@
   // During the live demo, open this file locally (double-click it, or serve
   // it with a plain http:// static server) rather than the https Pages URL,
   // so it can actually reach http://localhost:3000.
-  const API_BASE_URL = 'http://localhost:3000';
+  function resolveApiBaseUrl(){
+    const params = new URLSearchParams(window.location.search);
+    const apiOverride = params.get('api');
+    if (apiOverride) {
+      const cleanOverride = apiOverride.replace(/\/+$/, '');
+      try { localStorage.setItem('vigil_api_base_url', cleanOverride); } catch(e) { /* ignore */ }
+      return cleanOverride;
+    }
+    try {
+      const stored = localStorage.getItem('vigil_api_base_url');
+      if (stored) return stored.replace(/\/+$/, '');
+    } catch(e) { /* ignore */ }
+    if (window.location.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+      return `http://${window.location.hostname}:3000`;
+    }
+    return 'http://localhost:3000';
+  }
+
+  const API_BASE_URL = resolveApiBaseUrl();
   const API_HEALTH_PATH = '/api/health';
   const API_RECHECK_MS = 5000;
 
@@ -2084,7 +2102,17 @@ emergencyTypeSheet.querySelectorAll('[data-emergency-type]').forEach(btn => {
         setAuthNote('walkNotifyNote', result.message || 'No guardian email addresses are saved for this account.');
       }
     } catch (error) {
-      setAuthNote('walkNotifyNote', 'Guardian emails could not be sent. Safe Walk continues in simulated mode.');
+      let message = 'Guardian emails could not be sent. Safe Walk continues in simulated mode.';
+      if (error.status === 401) {
+        message = 'Sign in through the API before guardian emails can be sent. Safe Walk continues in simulated mode.';
+      } else if (error.status === 503) {
+        message = 'Gmail SMTP is not configured on the API. Safe Walk continues in simulated mode.';
+      } else if (error.status >= 500) {
+        message = 'The API reached an email or database error. Safe Walk continues in simulated mode.';
+      } else if (!error.status) {
+        message = `Could not reach the API at ${API_BASE_URL}. Safe Walk continues in simulated mode.`;
+      }
+      setAuthNote('walkNotifyNote', message);
     }
   }
 
